@@ -1,0 +1,13 @@
+:root { font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif; }
+body { margin:0; background:#0b1020; color:#f6f7fb; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+h1 { font-size: 28px; margin: 8px 0 16px; }
+.muted { color: #a5adc6; margin-bottom: 24px; }
+.card { background: #121a34; border: 1px solid #1e2a55; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.row { display: grid; grid-template-columns: 140px 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
+input, select, button { padding: 8px 10px; border-radius: 8px; border: 1px solid #2a396f; background: #0e1530; color: #e6e9f8; }
+button { cursor: pointer; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { border-bottom: 1px solid #1e2a55; padding: 8px; text-align: left; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr; } }
