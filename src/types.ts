@@ -31,3 +31,41 @@ export interface OcrDateResult {
   raw?: string
   confidence?: number
 }
+
+// Recipe-related types for Spoonacular integration
+export interface RecipeIngredient {
+  id: number
+  amount: number
+  unit: string
+  unitLong: string
+  unitShort: string
+  aisle: string
+  name: string
+  original: string
+  originalName: string
+  meta: string[]
+  image: string
+}
+
+export interface Recipe {
+  id: number
+  title: string
+  image: string
+  imageType?: string
+  usedIngredientCount?: number
+  missedIngredientCount?: number
+  missedIngredients?: RecipeIngredient[]
+  usedIngredients?: RecipeIngredient[]
+  unusedIngredients?: RecipeIngredient[]
+  likes?: number
+  readyInMinutes?: number
+  servings?: number
+  sourceUrl?: string
+  summary?: string
+  cuisines?: string[]
+  dishTypes?: string[]
+  diets?: string[]
+  instructions?: string
+  spoonacularScore?: number
+  healthScore?: number
+}

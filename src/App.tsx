@@ -4,6 +4,7 @@ import HomeScreen from './screens/HomeScreen'
 import ScanScreen from './screens/ScanScreen'
 import AddProductScreen from './screens/AddProductScreen'
 import ProductListScreen from './screens/ProductListScreen'
+import RecipeIdeasScreen from './screens/RecipeIdeasScreen'
 
 export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas'
 
@@ -46,10 +47,7 @@ export default function App() {
     scan: <ScanScreen setCurrentScreen={setCurrentScreen} onBarcodeDetected={handleBarcodeDetected} />,
     add: <AddProductScreen setCurrentScreen={setCurrentScreen} scannedBarcode={scannedBarcode} />,
     list: <ProductListScreen setCurrentScreen={setCurrentScreen} />,
-    ideas: <div className="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen pb-24 p-6">
-      <h1 className="text-2xl font-bold text-gray-900">Idées recettes</h1>
-      <p className="text-gray-600 mt-2">À venir...</p>
-    </div>
+    ideas: <RecipeIdeasScreen setCurrentScreen={setCurrentScreen} />
   }
 
   return (
