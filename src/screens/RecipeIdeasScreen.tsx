@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { db } from '../db'
-import type { Recipe, Product } from '../types'
+import type { Recipe, Product, Screen } from '../types'
 import { searchRecipesByIngredients, type SpoonacularRecipe } from '../services/spoonacular'
 import RecipeList from '../components/RecipeList'
 import { ChefHat, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
 
 interface RecipeIdeasScreenProps {
-  setCurrentScreen: (screen: string) => void
+  setCurrentScreen: (screen: Screen) => void
 }
 
 export default function RecipeIdeasScreen({ setCurrentScreen }: RecipeIdeasScreenProps) {

@@ -1,0 +1,6 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { ChevronRight } from 'lucide-react';
+import BarcodeScanner from '../components/BarcodeScanner';
+export default function ScanScreen({ setCurrentScreen, onBarcodeDetected }) {
+    return (_jsxs("div", { className: "bg-gray-900 min-h-screen relative pb-24", children: [_jsx("div", { className: "relative z-10 p-6", children: _jsxs("button", { onClick: () => setCurrentScreen('home'), className: "text-white flex items-center gap-2", children: [_jsx(ChevronRight, { className: "w-6 h-6 rotate-180" }), _jsx("span", { children: "Retour" })] }) }), _jsx("div", { className: "px-6", children: _jsx(BarcodeScanner, { onDetected: onBarcodeDetected }) }), _jsxs("div", { className: "absolute bottom-20 left-0 right-0 bg-white rounded-t-3xl p-6", children: [_jsx("h2", { className: "text-xl font-bold text-gray-900 mb-2", children: "Scannez le code-barres" }), _jsx("p", { className: "text-gray-600 mb-4", children: "Positionnez le code dans le cadre" }), _jsx("button", { onClick: () => setCurrentScreen('add'), className: "w-full bg-gray-100 text-gray-700 rounded-xl p-4 font-semibold hover:bg-gray-200 transition-colors", children: "Saisir manuellement" })] })] }));
+}

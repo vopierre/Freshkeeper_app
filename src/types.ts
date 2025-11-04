@@ -1,4 +1,5 @@
 export type LocationKind = 'fridge' | 'freezer' | 'pantry'
+export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas'
 
 export interface Product {
   id: string

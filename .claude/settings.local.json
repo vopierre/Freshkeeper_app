@@ -9,7 +9,8 @@
       "Bash(npx:*)",
       "Bash(start \"\" \"c:\\Users\\vopie\\Documents\\GitHub\\freshkeeper\\index.html\")",
       "Bash(npm run dev:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

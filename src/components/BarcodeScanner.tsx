@@ -52,7 +52,7 @@ export default function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
       // Scanner en continu
       reader.decodeFromVideoElement(
         videoRef.current!,
-        (result: Result | null, error?: Error) => {
+        (result, error) => {
           if (result) {
             const barcode = result.getText()
             console.log('Code-barres détecté:', barcode)
