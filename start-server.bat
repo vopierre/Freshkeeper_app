@@ -1,0 +1,3 @@
+@echo off
+echo Starting FreshKeeper server on port 8000...
+node server.js

@@ -1,0 +1,3 @@
+@echo off
+echo Ouverture de FreshKeeper dans votre navigateur...
+start "" "c:\Users\vopie\Documents\GitHub\freshkeeper\index.html"

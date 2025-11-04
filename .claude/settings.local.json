@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes live-server --port=8000 --open=false)",
+      "Bash(node:*)",
+      "Bash(start /B node server.js)",
+      "Bash(dir:*)",
+      "Bash(where:*)",
+      "Bash(npx:*)",
+      "Bash(start \"\" \"c:\\Users\\vopie\\Documents\\GitHub\\freshkeeper\\index.html\")",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
