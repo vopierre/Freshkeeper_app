@@ -39,4 +39,7 @@ Puis remplacer l'OCR Tesseract par ML Kit, et ajouter un scanner code-barres.
 
 ---
 
+## Memo
+- Dans le cas des aliments type fruit / legumes. La date doit être celle d'achat et non de peremption
+- L'app doit pouvoir determiner le nom de jours que "dure" un F&L
 Made with ❤️
