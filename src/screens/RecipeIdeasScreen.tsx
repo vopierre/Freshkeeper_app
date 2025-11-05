@@ -3,6 +3,7 @@ import { db } from '../db'
 import type { Recipe, Product, Screen } from '../types'
 import { searchRecipesByIngredients, type SpoonacularRecipe } from '../services/spoonacular'
 import RecipeList from '../components/RecipeList'
+import RecipeDetailView from '../components/RecipeDetailView'
 import { ChefHat, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
 
 interface RecipeIdeasScreenProps {
@@ -14,6 +15,7 @@ export default function RecipeIdeasScreen({ setCurrentScreen }: RecipeIdeasScree
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
 
   useEffect(() => {
     loadProducts()
@@ -102,6 +104,19 @@ export default function RecipeIdeasScreen({ setCurrentScreen }: RecipeIdeasScree
 
   const handleRefresh = () => {
     loadRecipes()
+  }
+
+  const handleRecipeClick = (recipe: Recipe) => {
+    setSelectedRecipe(recipe)
+  }
+
+  const handleCloseDetail = () => {
+    setSelectedRecipe(null)
+  }
+
+  // Show detail view if a recipe is selected
+  if (selectedRecipe) {
+    return <RecipeDetailView recipe={selectedRecipe} onClose={handleCloseDetail} />
   }
 
   return (
@@ -201,7 +216,7 @@ export default function RecipeIdeasScreen({ setCurrentScreen }: RecipeIdeasScree
                 Triées par correspondance avec vos ingrédients
               </p>
             </div>
-            <RecipeList recipes={recipes} />
+            <RecipeList recipes={recipes} onRecipeClick={handleRecipeClick} />
           </div>
         )}
       </div>

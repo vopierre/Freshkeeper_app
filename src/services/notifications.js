@@ -34,7 +34,7 @@ export async function scheduleFor(product) {
 export function startInTabScheduler() {
     setInterval(async () => {
         const now = dayjs();
-        const due = await db.plans.where('delivered').equals(false).toArray();
+        const due = await db.plans.where('delivered').equals(0).toArray();
         for (const p of due) {
             if (dayjs(p.scheduledAt).isBefore(now)) {
                 const prod = await db.products.get(p.productId);
