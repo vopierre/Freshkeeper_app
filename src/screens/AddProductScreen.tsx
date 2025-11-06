@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Refrigerator, Snowflake, Package } from 'lucide-react'
 import { db } from '../db'
 import type { Product, LocationKind } from '../types'
 import { scheduleFor } from '../services/notifications'
@@ -19,7 +19,6 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
   const [brand, setBrand] = useState('')
   const [barcode, setBarcode] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [location, setLocation] = useState<LocationKind>('fridge')
   const [purchaseDate, setPurchaseDate] = useState(dayjs().format('YYYY-MM-DD'))
   const [expirationDate, setExpirationDate] = useState('')
   const [useManualDate, setUseManualDate] = useState(false)
@@ -51,22 +50,34 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
     }
   }
 
-  // Calcul automatique de la date de péremption
+  // Calcul automatique de la date de péremption basé sur le frigo par défaut
   useEffect(() => {
     if (name && purchaseDate && !useManualDate) {
       const isFreshProduct = shouldUsePurchaseDate(name)
 
       if (isFreshProduct) {
-        const calculatedDate = calculateExpirationDate(purchaseDate, name, location)
+        const calculatedDate = calculateExpirationDate(purchaseDate, name, 'fridge')
         if (calculatedDate) {
           setExpirationDate(calculatedDate)
         }
       }
     }
-  }, [name, purchaseDate, location, useManualDate])
+  }, [name, purchaseDate, useManualDate])
 
-  async function handleSave() {
-    if (!name || !expirationDate) return
+  async function handleSave(selectedLocation: LocationKind) {
+    if (!name) return
+
+    // Recalculer la date de péremption selon le lieu sélectionné
+    let finalExpirationDate = expirationDate
+
+    if (!useManualDate && shouldUsePurchaseDate(name)) {
+      const calculatedDate = calculateExpirationDate(purchaseDate, name, selectedLocation)
+      if (calculatedDate) {
+        finalExpirationDate = calculatedDate
+      }
+    }
+
+    if (!finalExpirationDate) return
 
     const now = new Date().toISOString()
     const product: Product = {
@@ -75,8 +86,8 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
       name,
       brand: brand || undefined,
       quantity: quantity || undefined,
-      location,
-      expirationDate,
+      location: selectedLocation,
+      expirationDate: finalExpirationDate,
       createdAt: now,
       updatedAt: now
     }
@@ -89,7 +100,6 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
     setBrand('')
     setBarcode('')
     setQuantity('1')
-    setLocation('fridge')
     setPurchaseDate(dayjs().format('YYYY-MM-DD'))
     setExpirationDate('')
     setUseManualDate(false)
@@ -155,24 +165,17 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
             />
           </div>
 
-          {/* Lieu de stockage */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Lieu de stockage *</label>
-            <select
-              value={location}
-              onChange={e => setLocation(e.target.value as LocationKind)}
-              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
-            >
-              <option value="fridge">Réfrigérateur</option>
-              <option value="freezer">Congélateur</option>
-              <option value="pantry">Garde-manger</option>
-            </select>
-            {name && getShelfLifeInfo(name, location) && (
-              <p className="text-sm text-gray-600 mt-1">
-                Durée de conservation: {getShelfLifeInfo(name, location)}
-              </p>
-            )}
-          </div>
+          {/* Lieu de stockage - Info uniquement */}
+          {name && (
+            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Durées de conservation :</p>
+              <div className="space-y-1 text-sm text-gray-600">
+                <p>🧊 Frigo : {getShelfLifeInfo(name, 'fridge')}</p>
+                <p>❄️ Congélateur : {getShelfLifeInfo(name, 'freezer')}</p>
+                <p>📦 Garde-manger : {getShelfLifeInfo(name, 'pantry')}</p>
+              </div>
+            </div>
+          )}
 
           {/* Date d'achat */}
           <div>
@@ -210,7 +213,7 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
             />
             {daysUntilExpiry !== null && (
               <p className="text-center text-sm text-gray-500 mt-2">
-                Dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}
+                {dayjs(expirationDate).format('DD/MM/YYYY')} - Dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}
               </p>
             )}
             {!useManualDate && shouldUsePurchaseDate(name) && expirationDate && (
@@ -233,14 +236,35 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
           </div>
         </div>
 
-        {/* Bouton principal */}
-        <button
-          onClick={handleSave}
-          disabled={!name || !expirationDate}
-          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-5 font-bold text-lg shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Ajouter au {location === 'fridge' ? 'frigo' : location === 'freezer' ? 'congélateur' : 'garde-manger'}
-        </button>
+        {/* Boutons d'ajout par lieu */}
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            onClick={() => handleSave('fridge')}
+            disabled={!name || !expirationDate}
+            className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-4 font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Refrigerator className="w-8 h-8" />
+            <span className="text-sm">Frigo</span>
+          </button>
+
+          <button
+            onClick={() => handleSave('freezer')}
+            disabled={!name || !expirationDate}
+            className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white rounded-xl p-4 font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Snowflake className="w-8 h-8" />
+            <span className="text-sm">Congélo</span>
+          </button>
+
+          <button
+            onClick={() => handleSave('pantry')}
+            disabled={!name || !expirationDate}
+            className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-xl p-4 font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Package className="w-8 h-8" />
+            <span className="text-sm">Garde-manger</span>
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
-import type { Result } from '@zxing/library'
 
 interface BarcodeScannerProps {
   onDetected: (barcode: string) => void
@@ -52,7 +51,7 @@ export default function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
       // Scanner en continu
       reader.decodeFromVideoElement(
         videoRef.current!,
-        (result, error) => {
+        (result) => {
           if (result) {
             const barcode = result.getText()
             console.log('Code-barres détecté:', barcode)
@@ -64,7 +63,22 @@ export default function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
       )
     } catch (err) {
       console.error('Erreur scanner:', err)
-      setError('Erreur lors de l\'accès à la caméra')
+
+      // Message d'erreur détaillé selon le type d'erreur
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          setError('Accès à la caméra refusé. Autorisez l\'accès dans les paramètres du navigateur.')
+        } else if (err.name === 'NotFoundError') {
+          setError('Aucune caméra trouvée sur cet appareil.')
+        } else if (err.name === 'NotSupportedError' || err.name === 'TypeError') {
+          setError('Caméra non accessible via HTTP. Utilisez HTTPS ou localhost, ou saisissez manuellement.')
+        } else {
+          setError('Erreur lors de l\'accès à la caméra. Utilisez la saisie manuelle.')
+        }
+      } else {
+        setError('Erreur lors de l\'accès à la caméra')
+      }
+
       setIsScanning(false)
     }
   }
