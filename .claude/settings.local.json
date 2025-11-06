@@ -13,7 +13,9 @@
       "Bash(npm run build:*)",
       "Bash(del /S /Q *.js 2)",
       "Bash(\"c:\\Users\\vopie\\Documents\\GitHub\\freshkeeper\\.gitignore\" 2)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nPréparer le déploiement Netlify\n\n- Ajout configuration netlify.toml\n- Amélioration du Service Worker pour production\n- Configuration des headers de sécurité pour PWA\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
