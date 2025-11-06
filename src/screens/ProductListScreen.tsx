@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Search } from 'lucide-react'
+import { ChevronRight, Search, X } from 'lucide-react'
 import { db } from '../db'
 import type { Product } from '../types'
 import type { Screen } from '../App'
@@ -23,6 +23,11 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
     const all = await db.products.toArray()
     all.sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
     setProducts(all)
+  }
+
+  async function handleDelete(id: string) {
+    await db.products.delete(id)
+    await loadProducts()
   }
 
   function getUrgencyLevel(expirationDate: string): 'urgent' | 'warning' | 'ok' {
@@ -72,8 +77,15 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
             <h2 className="text-sm font-bold text-red-600 mb-3 uppercase tracking-wide">Urgences</h2>
             <div className="space-y-3 mb-6">
               {urgentProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
+                <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm relative">
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
+                    title="Supprimer"
+                  >
+                    <X className="w-5 h-5 text-red-600" />
+                  </button>
+                  <div className="flex justify-between items-start mb-2 pr-8">
                     <div>
                       <p className="font-bold text-gray-900">{product.name}</p>
                       <p className="text-sm text-gray-600">{product.brand || 'Sans marque'} {product.quantity && `- ${product.quantity}`}</p>
@@ -95,8 +107,15 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
             <h2 className="text-sm font-bold text-orange-600 mb-3 uppercase tracking-wide">À surveiller</h2>
             <div className="space-y-3 mb-6">
               {warningProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-orange-500 shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
+                <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-orange-500 shadow-sm relative">
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
+                    title="Supprimer"
+                  >
+                    <X className="w-5 h-5 text-red-600" />
+                  </button>
+                  <div className="flex justify-between items-start mb-2 pr-8">
                     <div>
                       <p className="font-bold text-gray-900">{product.name}</p>
                       <p className="text-sm text-gray-600">{product.brand || 'Sans marque'} {product.quantity && `- ${product.quantity}`}</p>
@@ -118,8 +137,15 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
             <h2 className="text-sm font-bold text-gray-600 mb-3 uppercase tracking-wide">Reste du frigo</h2>
             <div className="space-y-2">
               {okProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm">
-                  <div className="flex justify-between items-center">
+                <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm relative">
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
+                    title="Supprimer"
+                  >
+                    <X className="w-5 h-5 text-red-600" />
+                  </button>
+                  <div className="flex justify-between items-center pr-8">
                     <div>
                       <p className="font-semibold text-gray-900">{product.name}</p>
                       <p className="text-sm text-gray-600">{product.brand || 'Sans marque'} {product.quantity && `- ${product.quantity}`}</p>

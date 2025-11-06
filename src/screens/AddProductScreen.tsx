@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { db } from '../db'
-import type { Product } from '../types'
+import type { Product, LocationKind } from '../types'
 import { scheduleFor } from '../services/notifications'
 import { fetchOFF } from '../services/openfoodfacts'
 import { v4 as uuid } from 'uuid'
 import type { Screen } from '../App'
 import dayjs from 'dayjs'
+import { calculateExpirationDate, shouldUsePurchaseDate, getShelfLifeInfo } from '../utils/shelfLife'
 
 interface AddProductScreenProps {
   setCurrentScreen: (screen: Screen) => void
@@ -18,7 +19,10 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
   const [brand, setBrand] = useState('')
   const [barcode, setBarcode] = useState('')
   const [quantity, setQuantity] = useState('1')
+  const [location, setLocation] = useState<LocationKind>('fridge')
+  const [purchaseDate, setPurchaseDate] = useState(dayjs().format('YYYY-MM-DD'))
   const [expirationDate, setExpirationDate] = useState('')
+  const [useManualDate, setUseManualDate] = useState(false)
   const [loading, setLoading] = useState(false)
   const [productDetected, setProductDetected] = useState(false)
 
@@ -47,6 +51,20 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
     }
   }
 
+  // Calcul automatique de la date de péremption
+  useEffect(() => {
+    if (name && purchaseDate && !useManualDate) {
+      const isFreshProduct = shouldUsePurchaseDate(name)
+
+      if (isFreshProduct) {
+        const calculatedDate = calculateExpirationDate(purchaseDate, name, location)
+        if (calculatedDate) {
+          setExpirationDate(calculatedDate)
+        }
+      }
+    }
+  }, [name, purchaseDate, location, useManualDate])
+
   async function handleSave() {
     if (!name || !expirationDate) return
 
@@ -57,7 +75,7 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
       name,
       brand: brand || undefined,
       quantity: quantity || undefined,
-      location: 'fridge',
+      location,
       expirationDate,
       createdAt: now,
       updatedAt: now
@@ -71,7 +89,10 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
     setBrand('')
     setBarcode('')
     setQuantity('1')
+    setLocation('fridge')
+    setPurchaseDate(dayjs().format('YYYY-MM-DD'))
     setExpirationDate('')
+    setUseManualDate(false)
     setProductDetected(false)
     setCurrentScreen('home')
   }
@@ -134,20 +155,67 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
             />
           </div>
 
-          {/* Date de péremption - Focus principal */}
+          {/* Lieu de stockage */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Date de péremption *
-            </label>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Lieu de stockage *</label>
+            <select
+              value={location}
+              onChange={e => setLocation(e.target.value as LocationKind)}
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+            >
+              <option value="fridge">Réfrigérateur</option>
+              <option value="freezer">Congélateur</option>
+              <option value="pantry">Garde-manger</option>
+            </select>
+            {name && getShelfLifeInfo(name, location) && (
+              <p className="text-sm text-gray-600 mt-1">
+                Durée de conservation: {getShelfLifeInfo(name, location)}
+              </p>
+            )}
+          </div>
+
+          {/* Date d'achat */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Date d'achat</label>
+            <input
+              type="date"
+              value={purchaseDate}
+              onChange={e => setPurchaseDate(e.target.value)}
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Date de péremption - Auto ou manuelle */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-semibold text-gray-900">
+                Date de péremption *
+              </label>
+              {shouldUsePurchaseDate(name) && (
+                <button
+                  type="button"
+                  onClick={() => setUseManualDate(!useManualDate)}
+                  className="text-xs text-green-600 font-semibold"
+                >
+                  {useManualDate ? '← Auto' : 'Manuel →'}
+                </button>
+              )}
+            </div>
             <input
               type="date"
               value={expirationDate}
               onChange={e => setExpirationDate(e.target.value)}
-              className="w-full text-2xl font-bold text-center p-6 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none"
+              disabled={!useManualDate && shouldUsePurchaseDate(name)}
+              className="w-full text-xl font-bold text-center p-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none disabled:bg-green-50 disabled:text-green-800"
             />
             {daysUntilExpiry !== null && (
               <p className="text-center text-sm text-gray-500 mt-2">
                 Dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}
+              </p>
+            )}
+            {!useManualDate && shouldUsePurchaseDate(name) && expirationDate && (
+              <p className="text-center text-xs text-green-600 mt-1">
+                ✓ Calculée automatiquement
               </p>
             )}
           </div>
@@ -171,7 +239,7 @@ export default function AddProductScreen({ setCurrentScreen, scannedBarcode }: A
           disabled={!name || !expirationDate}
           className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-5 font-bold text-lg shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Ajouter au frigo
+          Ajouter au {location === 'fridge' ? 'frigo' : location === 'freezer' ? 'congélateur' : 'garde-manger'}
         </button>
       </div>
     </div>

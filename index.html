@@ -39,7 +39,8 @@
 
     <!-- Service Worker Registration -->
     <script>
-      if ('serviceWorker' in navigator) {
+      // Désactiver le Service Worker en développement
+      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
@@ -48,6 +49,14 @@
             .catch((error) => {
               console.log('Service Worker registration failed:', error)
             })
+        })
+      } else if ('serviceWorker' in navigator && location.hostname === 'localhost') {
+        // Désenregistrer le Service Worker en développement
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (let registration of registrations) {
+            registration.unregister()
+            console.log('Service Worker unregistered in development mode')
+          }
         })
       }
     </script>

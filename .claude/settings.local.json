@@ -10,7 +10,10 @@
       "Bash(start \"\" \"c:\\Users\\vopie\\Documents\\GitHub\\freshkeeper\\index.html\")",
       "Bash(npm run dev:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(del /S /Q *.js 2)",
+      "Bash(\"c:\\Users\\vopie\\Documents\\GitHub\\freshkeeper\\.gitignore\" 2)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []
