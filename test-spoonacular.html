@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Spoonacular API - Français</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #2c3e50; margin-top: 0; }
+    h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+    button {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .recipe-card {
+      border: 2px solid #ecf0f1;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: transform 0.2s;
+    }
+    .recipe-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .recipe-card img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .recipe-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+    .ingredients {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+    }
+    .instructions {
+      background: #e8f4f8;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 6px;
+      border: 2px solid #fcc;
+    }
+    .success {
+      background: #efe;
+      color: #363;
+      padding: 12px;
+      border-radius: 6px;
+      border: 2px solid #cfc;
+    }
+    .loading {
+      text-align: center;
+      padding: 24px;
+      color: #3498db;
+      font-weight: bold;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      background: #3498db;
+      color: white;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .stat-value { font-size: 24px; font-weight: bold; }
+    .stat-label { font-size: 12px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test Spoonacular API - Recettes en Français</h1>
+
+    <div>
+      <label><strong>Clé API Spoonacular :</strong></label>
+      <input type="text" id="apiKey" placeholder="Entrez votre clé API (gratuite sur spoonacular.com/food-api)" />
+      <small style="color: #666;">Pour obtenir une clé gratuite : <a href="https://spoonacular.com/food-api/console#Dashboard" target="_blank">https://spoonacular.com/food-api</a></small>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Test 1 : Recherche par ingrédients</h2>
+    <p>Testez avec les ingrédients que vous avez dans votre frigo</p>
+    <input type="text" id="ingredients" placeholder="Ex: tomate,oignon,poulet" value="tomate,oignon,poulet" />
+    <button onclick="testFindByIngredients()">🔍 Rechercher des recettes</button>
+    <div id="result1"></div>
+  </div>
+
+  <div class="container">
+    <h2>Test 2 : Recherche complexe</h2>
+    <p>Recherche avec mots-clés</p>
+    <input type="text" id="query" placeholder="Ex: tarte aux pommes" value="poulet" />
+    <button onclick="testComplexSearch()">🔍 Rechercher</button>
+    <div id="result2"></div>
+  </div>
+
+  <div class="container">
+    <h2>Test 3 : Détails d'une recette</h2>
+    <p>Sélectionnez d'abord une recette ci-dessus, ou entrez un ID manuellement</p>
+    <input type="text" id="recipeId" placeholder="ID de la recette (ex: 715497)" value="715497" />
+    <button onclick="testRecipeDetails()">📋 Voir les détails</button>
+    <div id="result3"></div>
+  </div>
+
+  <script>
+    function getApiKey() {
+      const key = document.getElementById('apiKey').value.trim()
+      if (!key) {
+        alert('Veuillez entrer votre clé API Spoonacular')
+        return null
+      }
+      return key
+    }
+
+    async function testFindByIngredients() {
+      const apiKey = getApiKey()
+      if (!apiKey) return
+
+      const ingredients = document.getElementById('ingredients').value
+      const result = document.getElementById('result1')
+
+      result.innerHTML = '<div class="loading">⏳ Recherche en cours...</div>'
+
+      try {
+        const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${encodeURIComponent(ingredients)}&number=5&ranking=1&language=fr&apiKey=${apiKey}`
+        console.log('URL:', url)
+
+        const response = await fetch(url)
+        const data = await response.json()
+
+        if (data.code === 401 || data.code === 402) {
+          result.innerHTML = `<div class="error">❌ Erreur API: ${data.message}</div>`
+          return
+        }
+
+        if (!data || data.length === 0) {
+          result.innerHTML = '<div class="error">Aucune recette trouvée</div>'
+          return
+        }
+
+        let html = `<div class="success">✅ ${data.length} recettes trouvées</div>`
+
+        data.forEach(recipe => {
+          html += `
+            <div class="recipe-card">
+              <img src="${recipe.image}" alt="${recipe.title}" />
+              <div class="recipe-title">${recipe.title}</div>
+              <div><strong>ID:</strong> ${recipe.id}</div>
+              <div><strong>Ingrédients utilisés:</strong> ${recipe.usedIngredientCount}</div>
+              <div><strong>Ingrédients manquants:</strong> ${recipe.missedIngredientCount}</div>
+              <button onclick="document.getElementById('recipeId').value='${recipe.id}'; testRecipeDetails()">
+                Voir les détails
+              </button>
+            </div>
+          `
+        })
+
+        result.innerHTML = html
+      } catch (error) {
+        result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`
+        console.error(error)
+      }
+    }
+
+    async function testComplexSearch() {
+      const apiKey = getApiKey()
+      if (!apiKey) return
+
+      const query = document.getElementById('query').value
+      const result = document.getElementById('result2')
+
+      result.innerHTML = '<div class="loading">⏳ Recherche en cours...</div>'
+
+      try {
+        const url = `https://api.spoonacular.com/recipes/complexSearch?query=${encodeURIComponent(query)}&number=5&language=fr&addRecipeInformation=true&apiKey=${apiKey}`
+        console.log('URL:', url)
+
+        const response = await fetch(url)
+        const data = await response.json()
+
+        if (data.code === 401 || data.code === 402) {
+          result.innerHTML = `<div class="error">❌ Erreur API: ${data.message}</div>`
+          return
+        }
+
+        if (!data.results || data.results.length === 0) {
+          result.innerHTML = '<div class="error">Aucune recette trouvée</div>'
+          return
+        }
+
+        let html = `<div class="success">✅ ${data.results.length} recettes trouvées (sur ${data.totalResults} total)</div>`
+
+        data.results.forEach(recipe => {
+          html += `
+            <div class="recipe-card">
+              <img src="${recipe.image}" alt="${recipe.title}" />
+              <div class="recipe-title">${recipe.title}</div>
+              <div><strong>ID:</strong> ${recipe.id}</div>
+              <div><strong>Temps:</strong> ${recipe.readyInMinutes || 'N/A'} min</div>
+              <div><strong>Portions:</strong> ${recipe.servings || 'N/A'}</div>
+              <button onclick="document.getElementById('recipeId').value='${recipe.id}'; testRecipeDetails()">
+                Voir les détails
+              </button>
+            </div>
+          `
+        })
+
+        result.innerHTML = html
+      } catch (error) {
+        result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`
+        console.error(error)
+      }
+    }
+
+    async function testRecipeDetails() {
+      const apiKey = getApiKey()
+      if (!apiKey) return
+
+      const recipeId = document.getElementById('recipeId').value
+      const result = document.getElementById('result3')
+
+      if (!recipeId) {
+        result.innerHTML = '<div class="error">Veuillez entrer un ID de recette</div>'
+        return
+      }
+
+      result.innerHTML = '<div class="loading">⏳ Chargement des détails...</div>'
+
+      try {
+        const url = `https://api.spoonacular.com/recipes/${recipeId}/information?language=fr&includeNutrition=false&apiKey=${apiKey}`
+        console.log('URL:', url)
+
+        const response = await fetch(url)
+        const recipe = await response.json()
+
+        if (recipe.code === 401 || recipe.code === 402 || recipe.code === 404) {
+          result.innerHTML = `<div class="error">❌ Erreur API: ${recipe.message || 'Recette introuvable'}</div>`
+          return
+        }
+
+        let html = `
+          <div class="recipe-card">
+            <img src="${recipe.image}" alt="${recipe.title}" />
+            <div class="recipe-title">${recipe.title}</div>
+
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-value">${recipe.readyInMinutes || 'N/A'}</div>
+                <div class="stat-label">Minutes</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value">${recipe.servings || 'N/A'}</div>
+                <div class="stat-label">Portions</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value">${recipe.healthScore || 'N/A'}</div>
+                <div class="stat-label">Score santé</div>
+              </div>
+            </div>
+
+            <div class="ingredients">
+              <h3>📝 Ingrédients (${recipe.extendedIngredients?.length || 0})</h3>
+              <ul>
+                ${recipe.extendedIngredients?.map(ing => `
+                  <li>${ing.original || ing.name}</li>
+                `).join('') || '<li>Aucun ingrédient disponible</li>'}
+              </ul>
+            </div>
+
+            <div class="instructions">
+              <h3>👨‍🍳 Instructions</h3>
+              ${recipe.instructions || '<p>Instructions non disponibles en français</p>'}
+            </div>
+
+            ${recipe.sourceUrl ? `
+              <div style="margin-top: 16px;">
+                <a href="${recipe.sourceUrl}" target="_blank" style="color: #3498db; text-decoration: none;">
+                  🔗 Voir la recette complète sur ${recipe.sourceName || 'le site source'}
+                </a>
+              </div>
+            ` : ''}
+          </div>
+        `
+
+        result.innerHTML = html
+
+        // Log pour analyse
+        console.log('Recette complète:', recipe)
+        console.log('Langue détectée:', recipe.language)
+        console.log('Instructions en français?', recipe.instructions?.includes('é') || recipe.instructions?.includes('à'))
+      } catch (error) {
+        result.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`
+        console.error(error)
+      }
+    }
+
+    // Message d'aide au démarrage
+    window.addEventListener('load', () => {
+      console.log('%c🧪 Test Spoonacular API', 'font-size: 20px; font-weight: bold; color: #3498db;')
+      console.log('Pour commencer:')
+      console.log('1. Obtenez une clé API gratuite sur: https://spoonacular.com/food-api')
+      console.log('2. Entrez votre clé dans le champ en haut')
+      console.log('3. Testez les différentes fonctionnalités')
+    })
+  </script>
+</body>
+</html>

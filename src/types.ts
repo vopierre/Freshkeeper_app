@@ -1,5 +1,15 @@
 export type LocationKind = 'fridge' | 'freezer' | 'pantry'
-export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas'
+export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas' | 'notifications'
+
+export interface AppNotification {
+  id: string
+  productId: string
+  productName: string
+  type: 'urgent' | 'expiring-today' | 'expiring-tomorrow'
+  message: string
+  createdAt: string
+  read: boolean
+}
 
 export interface Product {
   id: string

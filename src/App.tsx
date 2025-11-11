@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Camera, Bell, Calendar, ChevronRight, AlertCircle, Clock, Sparkles, Home, List, Zap, Receipt } from 'lucide-react'
 import HomeScreen from './screens/HomeScreen'
 import ScanScreen from './screens/ScanScreen'
@@ -6,12 +6,20 @@ import AddProductScreen from './screens/AddProductScreen'
 import ProductListScreen from './screens/ProductListScreen'
 import RecipeIdeasScreen from './screens/RecipeIdeasScreen'
 import ReceiptScanScreen from './screens/ReceiptScanScreen'
+import NotificationsScreen from './screens/NotificationsScreen'
+import { ensurePermission, startInTabScheduler } from './services/notifications'
 
-export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas' | 'receipt'
+export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas' | 'receipt' | 'notifications'
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
   const [scannedBarcode, setScannedBarcode] = useState<string>('')
+
+  // Initialiser les notifications au démarrage
+  useEffect(() => {
+    ensurePermission()
+    startInTabScheduler()
+  }, [])
 
   function handleBarcodeDetected(barcode: string) {
     setScannedBarcode(barcode)
@@ -49,7 +57,8 @@ export default function App() {
     add: <AddProductScreen setCurrentScreen={setCurrentScreen} scannedBarcode={scannedBarcode} />,
     list: <ProductListScreen setCurrentScreen={setCurrentScreen} />,
     ideas: <RecipeIdeasScreen setCurrentScreen={setCurrentScreen} />,
-    receipt: <ReceiptScanScreen setCurrentScreen={setCurrentScreen} />
+    receipt: <ReceiptScanScreen setCurrentScreen={setCurrentScreen} />,
+    notifications: <NotificationsScreen setCurrentScreen={setCurrentScreen} />
   }
 
   return (

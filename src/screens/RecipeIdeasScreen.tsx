@@ -5,6 +5,8 @@ import { searchRecipesByIngredients, type SpoonacularRecipe } from '../services/
 import RecipeList from '../components/RecipeList'
 import RecipeDetailView from '../components/RecipeDetailView'
 import { ChefHat, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
+import { translateText } from '../services/translation'
+import BellIcon from '../components/BellIcon'
 
 interface RecipeIdeasScreenProps {
   setCurrentScreen: (screen: Screen) => void
@@ -65,19 +67,26 @@ export default function RecipeIdeasScreen({ setCurrentScreen }: RecipeIdeasScree
         true // Ignore pantry items
       )
 
-      // Convert Spoonacular recipes to our Recipe type
-      const convertedRecipes: Recipe[] = spoonacularRecipes.map((r: SpoonacularRecipe) => ({
-        id: r.id,
-        title: r.title,
-        image: r.image,
-        imageType: r.imageType,
-        usedIngredientCount: r.usedIngredientCount,
-        missedIngredientCount: r.missedIngredientCount,
-        missedIngredients: r.missedIngredients,
-        usedIngredients: r.usedIngredients,
-        unusedIngredients: r.unusedIngredients,
-        likes: r.likes
-      }))
+      // Convert Spoonacular recipes to our Recipe type and translate titles
+      const convertedRecipes: Recipe[] = await Promise.all(
+        spoonacularRecipes.map(async (r: SpoonacularRecipe) => {
+          // Traduire le titre en français
+          const translatedTitle = await translateText(r.title, 'en', 'fr')
+
+          return {
+            id: r.id,
+            title: translatedTitle,
+            image: r.image,
+            imageType: r.imageType,
+            usedIngredientCount: r.usedIngredientCount,
+            missedIngredientCount: r.missedIngredientCount,
+            missedIngredients: r.missedIngredients,
+            usedIngredients: r.usedIngredients,
+            unusedIngredients: r.unusedIngredients,
+            likes: r.likes
+          }
+        })
+      )
 
       setRecipes(convertedRecipes)
 
@@ -137,14 +146,17 @@ export default function RecipeIdeasScreen({ setCurrentScreen }: RecipeIdeasScree
               </div>
             </div>
 
-            <button
-              onClick={handleRefresh}
-              disabled={loading || products.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualiser</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <BellIcon setCurrentScreen={setCurrentScreen} />
+              <button
+                onClick={handleRefresh}
+                disabled={loading || products.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Actualiser</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

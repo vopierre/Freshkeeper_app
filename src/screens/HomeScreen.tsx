@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Bell, Camera, Filter, Sparkles, AlertCircle, Clock, Calendar } from 'lucide-react'
+import { Camera, Filter, Sparkles, AlertCircle, Clock, Calendar } from 'lucide-react'
 import { db } from '../db'
 import type { Product } from '../types'
 import type { Screen } from '../App'
 import dayjs from 'dayjs'
+import BellIcon from '../components/BellIcon'
 
 interface HomeScreenProps {
   setCurrentScreen: (screen: Screen) => void
@@ -47,14 +48,9 @@ export default function HomeScreen({ setCurrentScreen, logo }: HomeScreenProps) 
         {/* Header avec logo */}
         <div className="flex justify-between items-start mb-8">
           {logo}
-          <button className="p-2 bg-white rounded-full shadow-sm relative">
-            <Bell className="w-6 h-6 text-gray-700" />
-            {urgentCount.today > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                {urgentCount.today}
-              </span>
-            )}
-          </button>
+          <div className="bg-white rounded-full shadow-sm">
+            <BellIcon setCurrentScreen={setCurrentScreen} />
+          </div>
         </div>
 
         {/* Urgences - Données critiques en premier */}

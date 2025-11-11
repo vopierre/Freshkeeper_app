@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Search, X } from 'lucide-react'
+import { ChevronRight, X, Refrigerator, Snowflake, Package } from 'lucide-react'
 import { db } from '../db'
 import type { Product } from '../types'
 import type { Screen } from '../App'
 import dayjs from 'dayjs'
 import { formatHuman } from '../utils/date'
+import BellIcon from '../components/BellIcon'
 
 interface ProductListScreenProps {
   setCurrentScreen: (screen: Screen) => void
@@ -46,6 +47,19 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
     return `${days} jours`
   }
 
+  function getLocationBadge(location: string) {
+    switch (location) {
+      case 'fridge':
+        return { icon: Refrigerator, label: 'Frigo', color: 'bg-blue-100 text-blue-700' }
+      case 'freezer':
+        return { icon: Snowflake, label: 'Congélo', color: 'bg-cyan-100 text-cyan-700' }
+      case 'pantry':
+        return { icon: Package, label: 'Garde-manger', color: 'bg-amber-100 text-amber-700' }
+      default:
+        return { icon: Package, label: 'Autre', color: 'bg-gray-100 text-gray-700' }
+    }
+  }
+
   const urgentProducts = products.filter(p => getUrgencyLevel(p.expirationDate) === 'urgent')
   const warningProducts = products.filter(p => getUrgencyLevel(p.expirationDate) === 'warning')
   const okProducts = products.filter(p => getUrgencyLevel(p.expirationDate) === 'ok')
@@ -62,7 +76,7 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
           <h1 className="text-xl font-bold text-gray-900">Mes produits</h1>
-          <Search className="w-6 h-6 text-gray-400" />
+          <BellIcon setCurrentScreen={setCurrentScreen} />
         </div>
 
         {/* Total */}
@@ -76,27 +90,43 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
           <>
             <h2 className="text-sm font-bold text-red-600 mb-3 uppercase tracking-wide">Urgences</h2>
             <div className="space-y-3 mb-6">
-              {urgentProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm relative">
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                    title="Supprimer"
-                  >
-                    <X className="w-5 h-5 text-red-600" />
-                  </button>
-                  <div className="flex justify-between items-start mb-2 pr-8">
-                    <div>
-                      <p className="font-bold text-gray-900">{product.name}</p>
-                      <p className="text-sm text-gray-600">{product.brand || 'Sans marque'} {product.quantity && `- ${product.quantity}`}</p>
+              {urgentProducts.map(product => {
+                const locationBadge = getLocationBadge(product.location)
+                const LocationIcon = locationBadge.icon
+                return (
+                  <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm relative">
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
+                      title="Supprimer"
+                    >
+                      <X className="w-5 h-5 text-red-600" />
+                    </button>
+                    <div className="flex justify-between items-start mb-2 pr-8">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-bold text-gray-900">{product.name}</p>
+                          <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
+                            <LocationIcon className="w-3 h-3" />
+                            <span>{locationBadge.label}</span>
+                          </span>
+                        </div>
+                        {(product.brand || (product.quantity && product.quantity !== '1')) && (
+                          <p className="text-sm text-gray-600">
+                            {product.brand}
+                            {product.brand && product.quantity && product.quantity !== '1' && ' - '}
+                            {product.quantity !== '1' && product.quantity}
+                          </p>
+                        )}
+                      </div>
+                      <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        {getUrgencyLabel(product.expirationDate)}
+                      </span>
                     </div>
-                    <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
-                      {getUrgencyLabel(product.expirationDate)}
-                    </span>
+                    <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
                   </div>
-                  <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}
@@ -106,27 +136,43 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
           <>
             <h2 className="text-sm font-bold text-orange-600 mb-3 uppercase tracking-wide">À surveiller</h2>
             <div className="space-y-3 mb-6">
-              {warningProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-orange-500 shadow-sm relative">
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                    title="Supprimer"
-                  >
-                    <X className="w-5 h-5 text-red-600" />
-                  </button>
-                  <div className="flex justify-between items-start mb-2 pr-8">
-                    <div>
-                      <p className="font-bold text-gray-900">{product.name}</p>
-                      <p className="text-sm text-gray-600">{product.brand || 'Sans marque'} {product.quantity && `- ${product.quantity}`}</p>
+              {warningProducts.map(product => {
+                const locationBadge = getLocationBadge(product.location)
+                const LocationIcon = locationBadge.icon
+                return (
+                  <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-orange-500 shadow-sm relative">
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
+                      title="Supprimer"
+                    >
+                      <X className="w-5 h-5 text-red-600" />
+                    </button>
+                    <div className="flex justify-between items-start mb-2 pr-8">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-bold text-gray-900">{product.name}</p>
+                          <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
+                            <LocationIcon className="w-3 h-3" />
+                            <span>{locationBadge.label}</span>
+                          </span>
+                        </div>
+                        {(product.brand || (product.quantity && product.quantity !== '1')) && (
+                          <p className="text-sm text-gray-600">
+                            {product.brand}
+                            {product.brand && product.quantity && product.quantity !== '1' && ' - '}
+                            {product.quantity !== '1' && product.quantity}
+                          </p>
+                        )}
+                      </div>
+                      <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                        {getUrgencyLabel(product.expirationDate)}
+                      </span>
                     </div>
-                    <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">
-                      {getUrgencyLabel(product.expirationDate)}
-                    </span>
+                    <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
                   </div>
-                  <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}
@@ -136,24 +182,40 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
           <>
             <h2 className="text-sm font-bold text-gray-600 mb-3 uppercase tracking-wide">Reste du frigo</h2>
             <div className="space-y-2">
-              {okProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm relative">
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                    title="Supprimer"
-                  >
-                    <X className="w-5 h-5 text-red-600" />
-                  </button>
-                  <div className="flex justify-between items-center pr-8">
-                    <div>
-                      <p className="font-semibold text-gray-900">{product.name}</p>
-                      <p className="text-sm text-gray-600">{product.brand || 'Sans marque'} {product.quantity && `- ${product.quantity}`}</p>
+              {okProducts.map(product => {
+                const locationBadge = getLocationBadge(product.location)
+                const LocationIcon = locationBadge.icon
+                return (
+                  <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm relative">
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
+                      title="Supprimer"
+                    >
+                      <X className="w-5 h-5 text-red-600" />
+                    </button>
+                    <div className="flex justify-between items-center pr-8">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-gray-900">{product.name}</p>
+                          <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
+                            <LocationIcon className="w-3 h-3" />
+                            <span>{locationBadge.label}</span>
+                          </span>
+                        </div>
+                        {(product.brand || (product.quantity && product.quantity !== '1')) && (
+                          <p className="text-sm text-gray-600">
+                            {product.brand}
+                            {product.brand && product.quantity && product.quantity !== '1' && ' - '}
+                            {product.quantity !== '1' && product.quantity}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-500 whitespace-nowrap">{getUrgencyLabel(product.expirationDate)}</span>
                     </div>
-                    <span className="text-sm text-gray-500">{getUrgencyLabel(product.expirationDate)}</span>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </>
         )}

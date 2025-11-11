@@ -1,15 +1,21 @@
 import Dexie, { Table } from 'dexie'
-import type { Product, NotificationPlan } from './types'
+import type { Product, NotificationPlan, AppNotification } from './types'
 
 class FreshDB extends Dexie {
   products!: Table<Product, string>
   plans!: Table<NotificationPlan, number>
+  notifications!: Table<AppNotification, string>
 
   constructor() {
     super('freshkeeper')
     this.version(1).stores({
       products: 'id, barcode, expirationDate, location, createdAt',
       plans: '++id, productId, scheduledAt, delivered'
+    })
+    this.version(2).stores({
+      products: 'id, barcode, expirationDate, location, createdAt',
+      plans: '++id, productId, scheduledAt, delivered',
+      notifications: 'id, productId, createdAt, read'
     })
   }
 }

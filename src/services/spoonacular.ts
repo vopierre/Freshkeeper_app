@@ -136,6 +136,7 @@ export async function searchRecipesByIngredients(
     url.searchParams.append('number', number.toString())
     url.searchParams.append('ranking', ranking.toString())
     url.searchParams.append('ignorePantry', ignorePantry.toString())
+    url.searchParams.append('language', 'fr') // Support français
 
     const response = await fetch(url.toString())
 
@@ -176,6 +177,7 @@ export async function getRecipeDetails(
     const url = new URL(`${BASE_URL}/recipes/${recipeId}/information`)
     url.searchParams.append('apiKey', API_KEY)
     url.searchParams.append('includeNutrition', includeNutrition.toString())
+    url.searchParams.append('language', 'fr') // Support français
 
     const response = await fetch(url.toString())
 
@@ -224,6 +226,7 @@ export async function searchRecipes(
     url.searchParams.append('query', query)
     url.searchParams.append('number', number.toString())
     url.searchParams.append('addRecipeInformation', 'true')
+    url.searchParams.append('language', 'fr') // Support français
 
     if (cuisine) url.searchParams.append('cuisine', cuisine)
     if (diet) url.searchParams.append('diet', diet)
