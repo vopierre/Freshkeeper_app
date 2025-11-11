@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Camera, Bell, Calendar, ChevronRight, AlertCircle, Clock, Sparkles, Home, List, Zap } from 'lucide-react'
+import { Camera, Bell, Calendar, ChevronRight, AlertCircle, Clock, Sparkles, Home, List, Zap, Receipt } from 'lucide-react'
 import HomeScreen from './screens/HomeScreen'
 import ScanScreen from './screens/ScanScreen'
 import AddProductScreen from './screens/AddProductScreen'
 import ProductListScreen from './screens/ProductListScreen'
 import RecipeIdeasScreen from './screens/RecipeIdeasScreen'
+import ReceiptScanScreen from './screens/ReceiptScanScreen'
 
-export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas'
+export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas' | 'receipt'
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
@@ -47,7 +48,8 @@ export default function App() {
     scan: <ScanScreen setCurrentScreen={setCurrentScreen} onBarcodeDetected={handleBarcodeDetected} />,
     add: <AddProductScreen setCurrentScreen={setCurrentScreen} scannedBarcode={scannedBarcode} />,
     list: <ProductListScreen setCurrentScreen={setCurrentScreen} />,
-    ideas: <RecipeIdeasScreen setCurrentScreen={setCurrentScreen} />
+    ideas: <RecipeIdeasScreen setCurrentScreen={setCurrentScreen} />,
+    receipt: <ReceiptScanScreen setCurrentScreen={setCurrentScreen} />
   }
 
   return (
@@ -109,11 +111,16 @@ export default function App() {
           </button>
 
           <button
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl hover:bg-gray-50 transition-all"
+            onClick={() => setCurrentScreen('receipt')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              currentScreen === 'receipt'
+                ? 'bg-emerald-50'
+                : 'hover:bg-gray-50'
+            }`}
           >
-            <Zap className="w-6 h-6 text-gray-400" />
-            <span className="text-xs font-semibold text-gray-500">
-              Plus
+            <Receipt className={`w-6 h-6 ${currentScreen === 'receipt' ? 'text-emerald-600' : 'text-gray-400'}`} />
+            <span className={`text-xs font-semibold ${currentScreen === 'receipt' ? 'text-emerald-600' : 'text-gray-500'}`}>
+              Ticket
             </span>
           </button>
         </div>
