@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Camera, Bell, Calendar, ChevronRight, AlertCircle, Clock, Sparkles, Home, List, Zap, Receipt } from 'lucide-react'
+import { Camera, Sparkles, Home, List, Receipt } from 'lucide-react'
 import HomeScreen from './screens/HomeScreen'
 import ScanScreen from './screens/ScanScreen'
 import AddProductScreen from './screens/AddProductScreen'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, memo } from 'react'
 import { Bell } from 'lucide-react'
 import { db } from '../db'
 import type { Screen } from '../App'
@@ -7,25 +7,30 @@ interface BellIconProps {
   setCurrentScreen: (screen: Screen) => void
 }
 
-export default function BellIcon({ setCurrentScreen }: BellIconProps) {
+function BellIcon({ setCurrentScreen }: BellIconProps) {
   const [notificationCount, setNotificationCount] = useState(0)
+
+  const loadNotificationCount = useCallback(async () => {
+    const count = await db.notifications.count()
+    setNotificationCount(count)
+  }, [])
 
   useEffect(() => {
     loadNotificationCount()
-    // Actualiser le compteur toutes les 2 secondes
-    const interval = setInterval(loadNotificationCount, 2000)
+    // Actualiser le compteur toutes les 5 secondes (au lieu de 2)
+    const interval = setInterval(loadNotificationCount, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [loadNotificationCount])
 
-  async function loadNotificationCount() {
-    const count = await db.notifications.count()
-    setNotificationCount(count)
-  }
+  const handleClick = useCallback(() => {
+    setCurrentScreen('notifications')
+  }, [setCurrentScreen])
 
   return (
     <button
-      onClick={() => setCurrentScreen('notifications')}
+      onClick={handleClick}
       className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+      aria-label={`Notifications (${notificationCount})`}
     >
       <Bell className="w-6 h-6 text-gray-700" />
       {notificationCount > 0 && (
@@ -36,3 +41,5 @@ export default function BellIcon({ setCurrentScreen }: BellIconProps) {
     </button>
   )
 }
+
+export default memo(BellIcon)

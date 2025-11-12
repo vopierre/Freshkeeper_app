@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Camera, Filter, Sparkles, AlertCircle, Clock, Calendar } from 'lucide-react'
 import { db } from '../db'
 import type { Product } from '../types'
@@ -15,13 +15,7 @@ export default function HomeScreen({ setCurrentScreen, logo }: HomeScreenProps) 
   const [products, setProducts] = useState<Product[]>([])
   const [urgentCount, setUrgentCount] = useState({ today: 0, threeDays: 0, week: 0 })
 
-  useEffect(() => {
-    loadProducts()
-    const interval = setInterval(loadProducts, 2000)
-    return () => clearInterval(interval)
-  }, [])
-
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     const all = await db.products.toArray()
     setProducts(all)
 
@@ -38,9 +32,19 @@ export default function HomeScreen({ setCurrentScreen, logo }: HomeScreenProps) 
     }).length
 
     setUrgentCount({ today, threeDays, week })
-  }
+  }, [])
 
-  const totalUrgent = urgentCount.today + urgentCount.threeDays + urgentCount.week
+  useEffect(() => {
+    loadProducts()
+    // Augmenter l'intervalle à 5 secondes au lieu de 2
+    const interval = setInterval(loadProducts, 5000)
+    return () => clearInterval(interval)
+  }, [loadProducts])
+
+  const totalUrgent = useMemo(() =>
+    urgentCount.today + urgentCount.threeDays + urgentCount.week,
+    [urgentCount]
+  )
 
   return (
     <div className="bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen pb-24">

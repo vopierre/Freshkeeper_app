@@ -104,7 +104,7 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
   }
 
   return (
-    <div className="bg-white min-h-screen pb-24">
+    <div className="bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen pb-24">
       <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">

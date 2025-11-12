@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { ChevronRight, X, Refrigerator, Snowflake, Package } from 'lucide-react'
 import { db } from '../db'
 import type { Product } from '../types'
@@ -11,61 +11,64 @@ interface ProductListScreenProps {
   setCurrentScreen: (screen: Screen) => void
 }
 
+function getUrgencyLevel(expirationDate: string): 'urgent' | 'warning' | 'ok' {
+  const days = dayjs(expirationDate).diff(dayjs(), 'day')
+  if (days < 3) return 'urgent'
+  if (days < 15) return 'warning'
+  return 'ok'
+}
+
+function getUrgencyLabel(expirationDate: string): string {
+  const days = dayjs(expirationDate).diff(dayjs(), 'day')
+  if (days < 0) return 'Périmé'
+  if (days === 0) return 'Aujourd\'hui'
+  if (days === 1) return 'Demain'
+  if (days < 7) return `${days} jours`
+  return `${days} jours`
+}
+
+function getLocationBadge(location: string) {
+  switch (location) {
+    case 'fridge':
+      return { icon: Refrigerator, label: 'Frigo', color: 'bg-blue-100 text-blue-700' }
+    case 'freezer':
+      return { icon: Snowflake, label: 'Congélo', color: 'bg-cyan-100 text-cyan-700' }
+    case 'pantry':
+      return { icon: Package, label: 'Garde-manger', color: 'bg-amber-100 text-amber-700' }
+    default:
+      return { icon: Package, label: 'Autre', color: 'bg-gray-100 text-gray-700' }
+  }
+}
+
 export default function ProductListScreen({ setCurrentScreen }: ProductListScreenProps) {
   const [products, setProducts] = useState<Product[]>([])
 
-  useEffect(() => {
-    loadProducts()
-    const interval = setInterval(loadProducts, 2000)
-    return () => clearInterval(interval)
-  }, [])
-
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     const all = await db.products.toArray()
     all.sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
     setProducts(all)
-  }
+  }, [])
 
-  async function handleDelete(id: string) {
+  useEffect(() => {
+    loadProducts()
+    // Augmenter l'intervalle à 5 secondes au lieu de 2
+    const interval = setInterval(loadProducts, 5000)
+    return () => clearInterval(interval)
+  }, [loadProducts])
+
+  const handleDelete = useCallback(async (id: string) => {
     await db.products.delete(id)
     await loadProducts()
-  }
+  }, [loadProducts])
 
-  function getUrgencyLevel(expirationDate: string): 'urgent' | 'warning' | 'ok' {
-    const days = dayjs(expirationDate).diff(dayjs(), 'day')
-    if (days < 3) return 'urgent'
-    if (days < 15) return 'warning'
-    return 'ok'
-  }
-
-  function getUrgencyLabel(expirationDate: string): string {
-    const days = dayjs(expirationDate).diff(dayjs(), 'day')
-    if (days < 0) return 'Périmé'
-    if (days === 0) return 'Aujourd\'hui'
-    if (days === 1) return 'Demain'
-    if (days < 7) return `${days} jours`
-    return `${days} jours`
-  }
-
-  function getLocationBadge(location: string) {
-    switch (location) {
-      case 'fridge':
-        return { icon: Refrigerator, label: 'Frigo', color: 'bg-blue-100 text-blue-700' }
-      case 'freezer':
-        return { icon: Snowflake, label: 'Congélo', color: 'bg-cyan-100 text-cyan-700' }
-      case 'pantry':
-        return { icon: Package, label: 'Garde-manger', color: 'bg-amber-100 text-amber-700' }
-      default:
-        return { icon: Package, label: 'Autre', color: 'bg-gray-100 text-gray-700' }
-    }
-  }
-
-  const urgentProducts = products.filter(p => getUrgencyLevel(p.expirationDate) === 'urgent')
-  const warningProducts = products.filter(p => getUrgencyLevel(p.expirationDate) === 'warning')
-  const okProducts = products.filter(p => getUrgencyLevel(p.expirationDate) === 'ok')
+  const { urgentProducts, warningProducts, okProducts } = useMemo(() => ({
+    urgentProducts: products.filter(p => getUrgencyLevel(p.expirationDate) === 'urgent'),
+    warningProducts: products.filter(p => getUrgencyLevel(p.expirationDate) === 'warning'),
+    okProducts: products.filter(p => getUrgencyLevel(p.expirationDate) === 'ok')
+  }), [products])
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-24">
+    <div className="bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen pb-24">
       <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -104,13 +107,7 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
                     </button>
                     <div className="flex justify-between items-start mb-2 pr-8">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-bold text-gray-900">{product.name}</p>
-                          <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
-                            <LocationIcon className="w-3 h-3" />
-                            <span>{locationBadge.label}</span>
-                          </span>
-                        </div>
+                        <p className="font-bold text-gray-900 mb-1">{product.name}</p>
                         {(product.brand || (product.quantity && product.quantity !== '1')) && (
                           <p className="text-sm text-gray-600">
                             {product.brand}
@@ -123,7 +120,13 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
                         {getUrgencyLabel(product.expirationDate)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
+                      <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
+                        <LocationIcon className="w-3 h-3" />
+                        <span>{locationBadge.label}</span>
+                      </span>
+                    </div>
                   </div>
                 )
               })}
@@ -150,13 +153,7 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
                     </button>
                     <div className="flex justify-between items-start mb-2 pr-8">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-bold text-gray-900">{product.name}</p>
-                          <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
-                            <LocationIcon className="w-3 h-3" />
-                            <span>{locationBadge.label}</span>
-                          </span>
-                        </div>
+                        <p className="font-bold text-gray-900 mb-1">{product.name}</p>
                         {(product.brand || (product.quantity && product.quantity !== '1')) && (
                           <p className="text-sm text-gray-600">
                             {product.brand}
@@ -169,7 +166,13 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
                         {getUrgencyLabel(product.expirationDate)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
+                      <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
+                        <LocationIcon className="w-3 h-3" />
+                        <span>{locationBadge.label}</span>
+                      </span>
+                    </div>
                   </div>
                 )
               })}
@@ -194,15 +197,9 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
                     >
                       <X className="w-5 h-5 text-red-600" />
                     </button>
-                    <div className="flex justify-between items-center pr-8">
+                    <div className="flex justify-between items-center mb-2 pr-8">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-gray-900">{product.name}</p>
-                          <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
-                            <LocationIcon className="w-3 h-3" />
-                            <span>{locationBadge.label}</span>
-                          </span>
-                        </div>
+                        <p className="font-semibold text-gray-900 mb-1">{product.name}</p>
                         {(product.brand || (product.quantity && product.quantity !== '1')) && (
                           <p className="text-sm text-gray-600">
                             {product.brand}
@@ -212,6 +209,12 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
                         )}
                       </div>
                       <span className="text-sm text-gray-500 whitespace-nowrap">{getUrgencyLabel(product.expirationDate)}</span>
+                    </div>
+                    <div className="flex justify-end">
+                      <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
+                        <LocationIcon className="w-3 h-3" />
+                        <span>{locationBadge.label}</span>
+                      </span>
                     </div>
                   </div>
                 )
