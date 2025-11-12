@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { ChevronRight, X, Refrigerator, Snowflake, Package } from 'lucide-react'
+import { ChevronRight, Search, X, Package } from 'lucide-react'
 import { db } from '../db'
 import type { Product } from '../types'
 import type { Screen } from '../App'
 import dayjs from 'dayjs'
-import { formatHuman } from '../utils/date'
 import BellIcon from '../components/BellIcon'
+import SwipeableProductCard from '../components/SwipeableProductCard'
 
 interface ProductListScreenProps {
   setCurrentScreen: (screen: Screen) => void
@@ -27,21 +27,9 @@ function getUrgencyLabel(expirationDate: string): string {
   return `${days} jours`
 }
 
-function getLocationBadge(location: string) {
-  switch (location) {
-    case 'fridge':
-      return { icon: Refrigerator, label: 'Frigo', color: 'bg-blue-100 text-blue-700' }
-    case 'freezer':
-      return { icon: Snowflake, label: 'Congélo', color: 'bg-cyan-100 text-cyan-700' }
-    case 'pantry':
-      return { icon: Package, label: 'Garde-manger', color: 'bg-amber-100 text-amber-700' }
-    default:
-      return { icon: Package, label: 'Autre', color: 'bg-gray-100 text-gray-700' }
-  }
-}
-
 export default function ProductListScreen({ setCurrentScreen }: ProductListScreenProps) {
   const [products, setProducts] = useState<Product[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
 
   const loadProducts = useCallback(async () => {
     const all = await db.products.toArray()
@@ -61,17 +49,44 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
     await loadProducts()
   }, [loadProducts])
 
+  const handleConsume = useCallback(async (id: string) => {
+    // Animation de succès, puis suppression
+    await db.products.delete(id)
+    await loadProducts()
+  }, [loadProducts])
+
+  const handlePostpone = useCallback(async (id: string) => {
+    const product = await db.products.get(id)
+    if (product) {
+      // Reporter de 2 jours
+      const newDate = dayjs(product.expirationDate).add(2, 'day').format('YYYY-MM-DD')
+      await db.products.update(id, { expirationDate: newDate })
+      await loadProducts()
+    }
+  }, [loadProducts])
+
+  // Filtrer les produits selon la recherche
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products
+    const query = searchQuery.toLowerCase()
+    return products.filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      p.brand?.toLowerCase().includes(query) ||
+      p.location.toLowerCase().includes(query)
+    )
+  }, [products, searchQuery])
+
   const { urgentProducts, warningProducts, okProducts } = useMemo(() => ({
-    urgentProducts: products.filter(p => getUrgencyLevel(p.expirationDate) === 'urgent'),
-    warningProducts: products.filter(p => getUrgencyLevel(p.expirationDate) === 'warning'),
-    okProducts: products.filter(p => getUrgencyLevel(p.expirationDate) === 'ok')
-  }), [products])
+    urgentProducts: filteredProducts.filter(p => getUrgencyLevel(p.expirationDate) === 'urgent'),
+    warningProducts: filteredProducts.filter(p => getUrgencyLevel(p.expirationDate) === 'warning'),
+    okProducts: filteredProducts.filter(p => getUrgencyLevel(p.expirationDate) === 'ok')
+  }), [filteredProducts])
 
   return (
     <div className="bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen pb-24">
       <div className="p-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <button
             onClick={() => setCurrentScreen('home')}
             className="flex items-center gap-2 text-gray-700"
@@ -82,54 +97,74 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
           <BellIcon setCurrentScreen={setCurrentScreen} />
         </div>
 
-        {/* Total */}
-        <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-          <p className="text-sm text-gray-600">Total des produits</p>
-          <p className="text-3xl font-bold text-gray-900">{products.length} articles</p>
+        {/* Barre de recherche */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher un produit..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-3 bg-white rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          )}
+        </div>
+
+        {/* Total - Version 2 : Minimaliste avec bordure */}
+        <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border-l-4 border-emerald-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-3">
+              <p className="text-5xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                {searchQuery ? filteredProducts.length : products.length}
+              </p>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {searchQuery ? 'Résultats' : 'Produits'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  en stock
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <div className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
+                {urgentProducts.length} urgent{urgentProducts.length > 1 ? 's' : ''}
+              </div>
+              <div className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">
+                {warningProducts.length} à venir
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Liste urgences */}
         {urgentProducts.length > 0 && (
           <>
-            <h2 className="text-sm font-bold text-red-600 mb-3 uppercase tracking-wide">Urgences</h2>
-            <div className="space-y-3 mb-6">
-              {urgentProducts.map(product => {
-                const locationBadge = getLocationBadge(product.location)
-                const LocationIcon = locationBadge.icon
-                return (
-                  <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-red-500 shadow-sm relative">
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                      title="Supprimer"
-                    >
-                      <X className="w-5 h-5 text-red-600" />
-                    </button>
-                    <div className="flex justify-between items-start mb-2 pr-8">
-                      <div className="flex-1">
-                        <p className="font-bold text-gray-900 mb-1">{product.name}</p>
-                        {(product.brand || (product.quantity && product.quantity !== '1')) && (
-                          <p className="text-sm text-gray-600">
-                            {product.brand}
-                            {product.brand && product.quantity && product.quantity !== '1' && ' - '}
-                            {product.quantity !== '1' && product.quantity}
-                          </p>
-                        )}
-                      </div>
-                      <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                        {getUrgencyLabel(product.expirationDate)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
-                      <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
-                        <LocationIcon className="w-3 h-3" />
-                        <span>{locationBadge.label}</span>
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            <h2 className="text-sm font-bold text-red-600 mb-3 uppercase tracking-wide flex items-center gap-2">
+              Urgences
+              <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">
+                Swipe → ✅ / ← 🗑️
+              </span>
+            </h2>
+            <div className="mb-6">
+              {urgentProducts.map(product => (
+                <SwipeableProductCard
+                  key={product.id}
+                  product={product}
+                  urgencyLevel="urgent"
+                  urgencyLabel={getUrgencyLabel(product.expirationDate)}
+                  onDelete={handleDelete}
+                  onConsume={handleConsume}
+                  onPostpone={handlePostpone}
+                />
+              ))}
             </div>
           </>
         )}
@@ -138,44 +173,18 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
         {warningProducts.length > 0 && (
           <>
             <h2 className="text-sm font-bold text-orange-600 mb-3 uppercase tracking-wide">À surveiller</h2>
-            <div className="space-y-3 mb-6">
-              {warningProducts.map(product => {
-                const locationBadge = getLocationBadge(product.location)
-                const LocationIcon = locationBadge.icon
-                return (
-                  <div key={product.id} className="bg-white rounded-xl p-4 border-l-4 border-orange-500 shadow-sm relative">
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                      title="Supprimer"
-                    >
-                      <X className="w-5 h-5 text-red-600" />
-                    </button>
-                    <div className="flex justify-between items-start mb-2 pr-8">
-                      <div className="flex-1">
-                        <p className="font-bold text-gray-900 mb-1">{product.name}</p>
-                        {(product.brand || (product.quantity && product.quantity !== '1')) && (
-                          <p className="text-sm text-gray-600">
-                            {product.brand}
-                            {product.brand && product.quantity && product.quantity !== '1' && ' - '}
-                            {product.quantity !== '1' && product.quantity}
-                          </p>
-                        )}
-                      </div>
-                      <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
-                        {getUrgencyLabel(product.expirationDate)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500">Expire le {formatHuman(product.expirationDate)}</p>
-                      <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
-                        <LocationIcon className="w-3 h-3" />
-                        <span>{locationBadge.label}</span>
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="mb-6">
+              {warningProducts.map(product => (
+                <SwipeableProductCard
+                  key={product.id}
+                  product={product}
+                  urgencyLevel="warning"
+                  urgencyLabel={getUrgencyLabel(product.expirationDate)}
+                  onDelete={handleDelete}
+                  onConsume={handleConsume}
+                  onPostpone={handlePostpone}
+                />
+              ))}
             </div>
           </>
         )}
@@ -184,41 +193,18 @@ export default function ProductListScreen({ setCurrentScreen }: ProductListScree
         {okProducts.length > 0 && (
           <>
             <h2 className="text-sm font-bold text-gray-600 mb-3 uppercase tracking-wide">Reste du frigo</h2>
-            <div className="space-y-2">
-              {okProducts.map(product => {
-                const locationBadge = getLocationBadge(product.location)
-                const LocationIcon = locationBadge.icon
-                return (
-                  <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm relative">
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="absolute top-2 right-2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                      title="Supprimer"
-                    >
-                      <X className="w-5 h-5 text-red-600" />
-                    </button>
-                    <div className="flex justify-between items-center mb-2 pr-8">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 mb-1">{product.name}</p>
-                        {(product.brand || (product.quantity && product.quantity !== '1')) && (
-                          <p className="text-sm text-gray-600">
-                            {product.brand}
-                            {product.brand && product.quantity && product.quantity !== '1' && ' - '}
-                            {product.quantity !== '1' && product.quantity}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-sm text-gray-500 whitespace-nowrap">{getUrgencyLabel(product.expirationDate)}</span>
-                    </div>
-                    <div className="flex justify-end">
-                      <span className={`inline-flex items-center gap-1 ${locationBadge.color} text-xs font-semibold px-2 py-0.5 rounded-full`}>
-                        <LocationIcon className="w-3 h-3" />
-                        <span>{locationBadge.label}</span>
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            <div>
+              {okProducts.map(product => (
+                <SwipeableProductCard
+                  key={product.id}
+                  product={product}
+                  urgencyLevel="ok"
+                  urgencyLabel={getUrgencyLabel(product.expirationDate)}
+                  onDelete={handleDelete}
+                  onConsume={handleConsume}
+                  onPostpone={handlePostpone}
+                />
+              ))}
             </div>
           </>
         )}

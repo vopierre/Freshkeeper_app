@@ -7,6 +7,7 @@ import ProductListScreen from './screens/ProductListScreen'
 import RecipeIdeasScreen from './screens/RecipeIdeasScreen'
 import ReceiptScanScreen from './screens/ReceiptScanScreen'
 import NotificationsScreen from './screens/NotificationsScreen'
+import Onboarding from './components/Onboarding'
 import { ensurePermission, startInTabScheduler } from './services/notifications'
 
 export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas' | 'receipt' | 'notifications'
@@ -14,12 +15,50 @@ export type Screen = 'home' | 'scan' | 'add' | 'list' | 'ideas' | 'receipt' | 'n
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
   const [scannedBarcode, setScannedBarcode] = useState<string>('')
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    // Vérifier si l'utilisateur a déjà vu l'onboarding
+    return !localStorage.getItem('onboarding-completed')
+  })
+  const [logoClickCount, setLogoClickCount] = useState(0)
+  const [logoClickTimer, setLogoClickTimer] = useState<NodeJS.Timeout | null>(null)
 
   // Initialiser les notifications au démarrage
   useEffect(() => {
     ensurePermission()
     startInTabScheduler()
   }, [])
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('onboarding-completed', 'true')
+    setShowOnboarding(false)
+  }
+
+  const handleLogoClick = () => {
+    // Incrémenter le compteur de clics
+    const newCount = logoClickCount + 1
+    setLogoClickCount(newCount)
+
+    // Si c'est le premier clic, démarrer le timer
+    if (logoClickTimer) {
+      clearTimeout(logoClickTimer)
+    }
+
+    // Réinitialiser après 1 seconde
+    const timer = setTimeout(() => {
+      setLogoClickCount(0)
+    }, 1000)
+    setLogoClickTimer(timer)
+
+    // Si triple clic, réinitialiser l'onboarding
+    if (newCount === 3) {
+      localStorage.removeItem('onboarding-completed')
+      setShowOnboarding(true)
+      setLogoClickCount(0)
+      if (logoClickTimer) {
+        clearTimeout(logoClickTimer)
+      }
+    }
+  }
 
   function handleBarcodeDetected(barcode: string) {
     setScannedBarcode(barcode)
@@ -28,7 +67,7 @@ export default function App() {
 
   // Logo FreshKeep Component
   const FreshKeepLogo = () => (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 cursor-pointer" onClick={handleLogoClick}>
       <div className="relative">
         <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
           <div className="relative">
@@ -63,10 +102,12 @@ export default function App() {
 
   return (
     <div className="max-w-md mx-auto bg-white shadow-2xl relative min-h-screen">
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
       {screens[currentScreen]}
 
       {/* Menu de navigation en bas */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 shadow-lg z-50">
+      {!showOnboarding && (
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 shadow-lg z-50">
         <div className="flex justify-around items-center px-4 py-3">
           <button
             onClick={() => setCurrentScreen('home')}
@@ -134,6 +175,7 @@ export default function App() {
           </button>
         </div>
       </div>
+      )}
     </div>
   )
 }
