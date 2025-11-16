@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ChevronRight, Loader2, CheckCircle, Refrigerator, Snowflake, Package } from 'lucide-react'
 import PdfUploader from '../components/PdfUploader'
 import { extractProductsFromReceipt, DetectedProduct } from '../services/receiptOcr'
@@ -7,7 +7,6 @@ import { v4 as uuid } from 'uuid'
 import type { Product, LocationKind, Screen } from '../types'
 import { scheduleFor } from '../services/notifications'
 import dayjs from 'dayjs'
-import { calculateExpirationDate } from '../utils/shelfLife'
 
 interface ReceiptScanScreenProps {
   setCurrentScreen: (screen: Screen) => void
@@ -17,13 +16,144 @@ interface ProductWithDate extends DetectedProduct {
   id: string
   expirationDate: string
   selected: boolean
+  location: LocationKind
+}
+
+// Composant pour une carte de produit avec swipe
+function SwipeableProductCard({
+  product,
+  onLocationChange,
+  onToggleSelection,
+  onDateChange
+}: {
+  product: ProductWithDate
+  onLocationChange: (location: LocationKind) => void
+  onToggleSelection: () => void
+  onDateChange: (date: string) => void
+}) {
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  // Distance minimale pour considérer un swipe (en pixels)
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      // Swipe gauche -> Congélateur
+      onLocationChange('freezer')
+    } else if (isRightSwipe) {
+      // Swipe droite -> Garde-manger
+      onLocationChange('pantry')
+    }
+
+    setTouchStart(null)
+    setTouchEnd(null)
+  }
+
+  // Icône et couleur selon le lieu
+  const getLocationIcon = () => {
+    switch (product.location) {
+      case 'freezer':
+        return <Snowflake className="w-4 h-4 text-white" />
+      case 'pantry':
+        return <Package className="w-4 h-4 text-white" />
+      default:
+        return <Refrigerator className="w-4 h-4 text-white" />
+    }
+  }
+
+  const getLocationColor = () => {
+    switch (product.location) {
+      case 'freezer':
+        return 'bg-cyan-500'
+      case 'pantry':
+        return 'bg-amber-500'
+      default:
+        return 'bg-blue-500'
+    }
+  }
+
+  return (
+    <div
+      ref={cardRef}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      className={`relative border-2 rounded-xl p-4 transition-all ${
+        product.selected
+          ? 'border-green-400 bg-green-50'
+          : 'border-gray-200 bg-gray-50'
+      }`}
+    >
+      {/* Vignette de lieu de conservation */}
+      <div
+        className={`absolute bottom-3 right-3 ${getLocationColor()} rounded-full p-2 shadow-md`}
+        title={product.location === 'freezer' ? 'Congélateur' : product.location === 'pantry' ? 'Garde-manger' : 'Frigo'}
+      >
+        {getLocationIcon()}
+      </div>
+
+      <div className="flex items-start gap-3">
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={product.selected}
+          onChange={onToggleSelection}
+          className="mt-1 w-5 h-5 text-green-600 rounded focus:ring-green-500"
+        />
+
+        <div className="flex-1 pr-12">
+          {/* Nom du produit */}
+          <p className="font-semibold text-gray-900 mb-1">{product.name}</p>
+
+          {/* Quantité et prix */}
+          {(product.quantity || product.price) && (
+            <p className="text-sm text-gray-600 mb-2">
+              {product.quantity && `Qté: ${product.quantity}`}
+              {product.quantity && product.price && ' • '}
+              {product.price && `${product.price}€`}
+            </p>
+          )}
+
+          {/* Date de péremption */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Date de péremption :
+            </label>
+            <input
+              type="date"
+              value={product.expirationDate}
+              onChange={e => onDateChange(e.target.value)}
+              disabled={!product.selected}
+              className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScreenProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [products, setProducts] = useState<ProductWithDate[]>([])
   const [error, setError] = useState<string>('')
-  const [selectedLocation, setSelectedLocation] = useState<LocationKind>('fridge')
 
   async function handlePdfSelected(file: File) {
     setIsScanning(true)
@@ -44,7 +174,8 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
         ...p,
         id: uuid(),
         expirationDate: dayjs().add(7, 'day').format('YYYY-MM-DD'), // Date par défaut : +7 jours
-        selected: true
+        selected: true,
+        location: 'fridge' as LocationKind // Frigo par défaut
       }))
 
       setProducts(productsWithDates)
@@ -68,6 +199,12 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
     ))
   }
 
+  function updateProductLocation(id: string, location: LocationKind) {
+    setProducts(prev => prev.map(p =>
+      p.id === id ? { ...p, location } : p
+    ))
+  }
+
   async function handleSaveAll() {
     const selectedProducts = products.filter(p => p.selected)
 
@@ -85,7 +222,7 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
           id: p.id,
           name: p.name,
           quantity: p.quantity,
-          location: selectedLocation,
+          location: p.location, // Utiliser le lieu de conservation individuel
           expirationDate: p.expirationDate,
           createdAt: now,
           updatedAt: now
@@ -160,45 +297,22 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
         {/* Liste des produits détectés */}
         {products.length > 0 && !isScanning && (
           <div className="space-y-4">
-            {/* Sélection du lieu de stockage */}
-            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-gray-900 mb-3">📍 Lieu de stockage :</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setSelectedLocation('fridge')}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg transition-all ${
-                    selectedLocation === 'fridge'
-                      ? 'bg-blue-500 text-white shadow-md'
-                      : 'bg-white text-gray-600 border border-gray-300'
-                  }`}
-                >
-                  <Refrigerator className="w-5 h-5" />
-                  <span className="text-xs font-semibold">Frigo</span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedLocation('freezer')}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg transition-all ${
-                    selectedLocation === 'freezer'
-                      ? 'bg-cyan-500 text-white shadow-md'
-                      : 'bg-white text-gray-600 border border-gray-300'
-                  }`}
-                >
-                  <Snowflake className="w-5 h-5" />
-                  <span className="text-xs font-semibold">Congélo</span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedLocation('pantry')}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg transition-all ${
-                    selectedLocation === 'pantry'
-                      ? 'bg-amber-500 text-white shadow-md'
-                      : 'bg-white text-gray-600 border border-gray-300'
-                  }`}
-                >
-                  <Package className="w-5 h-5" />
-                  <span className="text-xs font-semibold">Garde-manger</span>
-                </button>
+            {/* Instructions de swipe */}
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-4">
+              <p className="text-sm font-semibold text-blue-900 mb-2">👆 Glissez pour changer le lieu :</p>
+              <div className="grid grid-cols-3 gap-2 text-xs text-blue-800">
+                <div className="flex items-center gap-1">
+                  <Refrigerator className="w-4 h-4" />
+                  <span>Par défaut : Frigo</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>← Swipe gauche</span>
+                  <Snowflake className="w-4 h-4" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Swipe droite →</span>
+                  <Package className="w-4 h-4" />
+                </div>
               </div>
             </div>
 
@@ -209,55 +323,16 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
               </h2>
             </div>
 
-            {/* Liste des produits */}
+            {/* Liste des produits avec swipe */}
             <div className="space-y-3">
               {products.map(product => (
-                <div
+                <SwipeableProductCard
                   key={product.id}
-                  className={`border-2 rounded-xl p-4 transition-all ${
-                    product.selected
-                      ? 'border-green-400 bg-green-50'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={product.selected}
-                      onChange={() => toggleProductSelection(product.id)}
-                      className="mt-1 w-5 h-5 text-green-600 rounded focus:ring-green-500"
-                    />
-
-                    <div className="flex-1">
-                      {/* Nom du produit */}
-                      <p className="font-semibold text-gray-900 mb-1">{product.name}</p>
-
-                      {/* Quantité et prix */}
-                      {(product.quantity || product.price) && (
-                        <p className="text-sm text-gray-600 mb-2">
-                          {product.quantity && `Qté: ${product.quantity}`}
-                          {product.quantity && product.price && ' • '}
-                          {product.price && `${product.price}€`}
-                        </p>
-                      )}
-
-                      {/* Date de péremption */}
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Date de péremption :
-                        </label>
-                        <input
-                          type="date"
-                          value={product.expirationDate}
-                          onChange={e => updateProductDate(product.id, e.target.value)}
-                          disabled={!product.selected}
-                          className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  product={product}
+                  onLocationChange={(location) => updateProductLocation(product.id, location)}
+                  onToggleSelection={() => toggleProductSelection(product.id)}
+                  onDateChange={(date) => updateProductDate(product.id, date)}
+                />
               ))}
             </div>
 

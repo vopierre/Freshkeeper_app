@@ -109,19 +109,33 @@ function parseReceiptText(text: string): DetectedProduct[] {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
   const products: DetectedProduct[] = []
 
-  // Mots-clés à ignorer (en-têtes, totaux, etc.)
+  // Mots-clés de fin de ticket (arrêter l'analyse après ces mots)
+  const endKeywords = ['total', 'sous-total', 'subtotal']
+
+  // Mots-clés à ignorer (en-têtes, etc.)
   const ignoreKeywords = [
-    'total', 'sous-total', 'subtotal', 'tva', 'vat', 'tax',
+    'tva', 'vat', 'tax',
     'carte', 'especes', 'cash', 'card', 'ticket', 'facture',
     'merci', 'thank', 'bienvenue', 'welcome', 'date', 'heure',
     'caisse', 'cashier', 'siret', 'tel', 'adresse', 'address'
   ]
 
-  // Patterns pour détecter les prix (ex: 2.50€, 2,50, €2.50)
-  const pricePattern = /(\d+[.,]\d{2})\s*€?|€\s*(\d+[.,]\d{2})/
+  // Patterns pour détecter les prix
+  // Format standard: prix à la fin (ex: "Lait 2.50€")
+  const pricePatternEnd = /(\d+[.,]\d{2})\s*€?$|€\s*(\d+[.,]\d{2})$/
+
+  // Format Magasins U: prix suivi du code type (ex: "Lait 2.50 11")
+  // Le code 11 indique un produit alimentaire
+  const pricePatternWithCode = /(\d+[.,]\d{2})\s*€?\s+(\d{1,2})$/
 
   for (const line of lines) {
     const lowerLine = line.toLowerCase()
+
+    // Arrêter l'analyse si on rencontre une ligne de total
+    if (endKeywords.some(keyword => lowerLine.includes(keyword))) {
+      console.log(`Arrêt de l'analyse après la ligne: "${line}"`)
+      break
+    }
 
     // Ignorer les lignes contenant des mots-clés à exclure
     if (ignoreKeywords.some(keyword => lowerLine.includes(keyword))) {
@@ -138,15 +152,36 @@ function parseReceiptText(text: string): DetectedProduct[] {
       continue
     }
 
-    // Extraire le prix s'il existe
-    const priceMatch = line.match(pricePattern)
+    // Vérifier d'abord le format Magasins U (prix + code type)
+    let priceMatch = line.match(pricePatternWithCode)
     let productName = line
     let price: string | undefined
+    let isFoodByCode = false
 
     if (priceMatch) {
-      price = priceMatch[1] || priceMatch[2]
-      // Retirer le prix de la ligne pour obtenir le nom du produit
-      productName = line.replace(pricePattern, '').trim()
+      price = priceMatch[1]
+      const typeCode = priceMatch[2]
+
+      // Le code 11 indique un produit alimentaire dans les magasins U
+      if (typeCode === '11') {
+        isFoodByCode = true
+      }
+
+      // Retirer le prix et le code type de la ligne pour obtenir le nom du produit
+      productName = line.replace(pricePatternWithCode, '').trim()
+    } else {
+      // Sinon, vérifier le format standard (prix à la fin)
+      priceMatch = line.match(pricePatternEnd)
+
+      if (priceMatch) {
+        price = priceMatch[1] || priceMatch[2]
+        // Retirer le prix de la ligne pour obtenir le nom du produit
+        productName = line.replace(pricePatternEnd, '').trim()
+      } else {
+        // RÈGLE STRICTE: Si la ligne n'a pas de prix à la fin, on l'ignore
+        // Cela permet d'éviter de détecter les catégories comme "FRUITS ET LEGUMES"
+        continue
+      }
     }
 
     // Essayer d'extraire la quantité (ex: 2x, x3, 3 unités)
@@ -164,21 +199,26 @@ function parseReceiptText(text: string): DetectedProduct[] {
 
     // Ne garder que les lignes qui ressemblent à des produits
     if (productName.length >= 3 && !(/^[^a-zA-Z]+$/.test(productName))) {
-      const confidence = calculateConfidence(productName, price)
+      const confidence = calculateConfidence(productName, price, isFoodByCode)
 
       products.push({
         name: productName,
         quantity,
         price,
-        confidence
-      })
+        confidence,
+        // Stocker si c'est un aliment confirmé par le code type (Magasins U)
+        isFoodByCode
+      } as DetectedProduct & { isFoodByCode: boolean })
     }
   }
 
   console.log('Tous les produits détectés:', products)
 
   // Filtrer pour ne garder QUE les produits alimentaires
-  const foodProducts = products.filter(p => isFoodProduct(p.name))
+  // Accepter les produits avec code type 11 (Magasins U) OU qui contiennent des mots-clés alimentaires
+  const foodProducts = products.filter((p: any) =>
+    p.isFoodByCode || isFoodProduct(p.name)
+  )
 
   console.log('Produits alimentaires détectés:', foodProducts)
 
@@ -240,11 +280,15 @@ function isFoodProduct(name: string): boolean {
 /**
  * Calcule un score de confiance pour un produit détecté
  */
-function calculateConfidence(name: string, price?: string): number {
+function calculateConfidence(name: string, price?: string, isFoodByCode?: boolean): number {
   let confidence = 0.3
 
-  // Bonus important si c'est un produit alimentaire reconnu
-  if (isFoodProduct(name)) {
+  // Bonus maximal si confirmé par le code type (Magasins U code 11)
+  if (isFoodByCode) {
+    confidence += 0.6
+  }
+  // Sinon, bonus si c'est un produit alimentaire reconnu par mots-clés
+  else if (isFoodProduct(name)) {
     confidence += 0.5  // Augmenté de 0.4 à 0.5
   }
 
