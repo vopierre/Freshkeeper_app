@@ -87,7 +87,45 @@ export default function SwipeableProductCard({
 
   const handleSaveName = async () => {
     if (editingName.trim() && editingName.trim() !== product.name) {
-      await db.products.update(product.id, { name: editingName.trim() })
+      const newName = editingName.trim()
+
+      // Déterminer le nom original (avant tout renommage)
+      // Si originalName existe déjà, on l'utilise, sinon c'est product.name actuel
+      const originalName = product.originalName || product.name
+      const normalizedOriginal = originalName.toLowerCase().trim()
+
+      // Si c'est le premier renommage, sauvegarder l'originalName
+      if (!product.originalName) {
+        await db.products.update(product.id, { originalName: product.name })
+      }
+
+      // Mettre à jour le nom du produit
+      await db.products.update(product.id, { name: newName })
+
+      // Sauvegarder le mapping pour les futurs scans
+      // Vérifier si un mapping existe déjà pour ce nom original
+      const existingMapping = await db.nameMappings
+        .where('originalName')
+        .equals(normalizedOriginal)
+        .first()
+
+      if (existingMapping) {
+        // Mettre à jour le mapping existant
+        await db.nameMappings.update(existingMapping.id!, {
+          customName: newName,
+          updatedAt: new Date().toISOString()
+        })
+        console.log(`✅ Mapping mis à jour: "${normalizedOriginal}" → "${newName}"`)
+      } else {
+        // Créer un nouveau mapping
+        await db.nameMappings.add({
+          originalName: normalizedOriginal,
+          customName: newName,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        console.log(`✅ Nouveau mapping créé: "${normalizedOriginal}" → "${newName}"`)
+      }
     }
     setIsEditing(false)
   }

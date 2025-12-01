@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera, Bell, Sparkles, ChevronRight, X } from 'lucide-react'
+import { Camera, Bell, Sparkles, ChevronRight, X, Receipt, Edit2, ThumbsUp } from 'lucide-react'
 
 interface OnboardingProps {
   onComplete: () => void
@@ -7,28 +7,40 @@ interface OnboardingProps {
 
 const slides = [
   {
+    icon: Receipt,
+    title: 'Importez vos tickets',
+    description: 'Scannez vos tickets de caisse PDF pour ajouter automatiquement tous vos produits alimentaires',
+    color: 'from-purple-500 to-pink-500'
+  },
+  {
     icon: Camera,
-    title: 'Scannez vos produits',
-    description: 'Utilisez le scan code-barres pour ajouter rapidement vos courses',
+    title: 'Ou scannez un produit',
+    description: 'Utilisez le scan code-barres pour ajouter rapidement un produit individuel',
     color: 'from-green-500 to-emerald-600'
+  },
+  {
+    icon: Edit2,
+    title: 'Personnalisez vos noms',
+    description: 'Renommez vos produits : l\'application retiendra le changement pour les prochains imports',
+    color: 'from-blue-500 to-cyan-500'
   },
   {
     icon: Bell,
     title: 'Recevez des alertes',
-    description: 'Soyez notifié quand un produit arrive à expiration',
+    description: 'Soyez notifié quand un produit arrive à expiration pour ne plus rien gaspiller',
     color: 'from-orange-500 to-red-500'
+  },
+  {
+    icon: ThumbsUp,
+    title: 'Gérez facilement',
+    description: 'Swipe → pour marquer "Mangé", ← pour "Jeté". Cliquez sur les badges pour modifier lieu et date',
+    color: 'from-emerald-500 to-teal-500'
   },
   {
     icon: Sparkles,
     title: 'Découvrez des recettes',
-    description: 'Trouvez des idées pour cuisiner avec vos produits',
-    color: 'from-purple-500 to-pink-500'
-  },
-  {
-    icon: ChevronRight,
-    title: 'Glissez pour gérer',
-    description: 'Swipe → pour consommer, ← pour jeter un produit',
-    color: 'from-blue-500 to-cyan-500'
+    description: 'Trouvez des idées pour cuisiner avec vos produits qui vont bientôt expirer',
+    color: 'from-pink-500 to-rose-500'
   }
 ]
 

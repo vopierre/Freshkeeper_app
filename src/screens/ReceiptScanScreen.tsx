@@ -17,6 +17,7 @@ interface ProductWithDate extends DetectedProduct {
   expirationDate: string
   selected: boolean
   location: LocationKind
+  originalName?: string
 }
 
 // Composant pour une carte de produit avec swipe
@@ -48,11 +49,13 @@ function SwipeableProductCard({
   }
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
+    if (!touchStart) return
 
-    const distance = touchStart - touchEnd
+    // Si touchEnd est null, c'est un tap sans mouvement
+    const distance = touchEnd ? touchStart - touchEnd : 0
     const isLeftSwipe = distance > minSwipeDistance
     const isRightSwipe = distance < -minSwipeDistance
+    const isTap = Math.abs(distance) < 10 // Mouvement < 10px = tap
 
     if (isLeftSwipe) {
       // Swipe gauche -> Congélateur
@@ -60,6 +63,9 @@ function SwipeableProductCard({
     } else if (isRightSwipe) {
       // Swipe droite -> Garde-manger
       onLocationChange('pantry')
+    } else if (isTap && product.location !== 'fridge') {
+      // Tap simple -> Réinitialiser au frigo (si pas déjà au frigo)
+      onLocationChange('fridge')
     }
 
     setTouchStart(null)
@@ -89,13 +95,28 @@ function SwipeableProductCard({
     }
   }
 
+  // Gestionnaire de clic (pour souris/PC) pour réinitialiser au frigo
+  const handleClick = (e: React.MouseEvent) => {
+    // Ignorer si c'est un clic sur la checkbox ou le sélecteur de date
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.closest('input')) {
+      return
+    }
+
+    // Réinitialiser au frigo si on est ailleurs
+    if (product.location !== 'fridge') {
+      onLocationChange('fridge')
+    }
+  }
+
   return (
     <div
       ref={cardRef}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      className={`relative border-2 rounded-xl p-4 transition-all ${
+      onClick={handleClick}
+      className={`relative border-2 rounded-xl p-4 transition-all cursor-pointer ${
         product.selected
           ? 'border-green-400 bg-green-50'
           : 'border-gray-200 bg-gray-50'
@@ -169,8 +190,33 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
         return
       }
 
+      // Forcer la réouverture de la connexion à la base de données pour s'assurer
+      // que les derniers mappings sont bien chargés
+      await db.open()
+
+      // Appliquer les mappings de noms personnalisés
+      const productsWithMappings = await Promise.all(
+        detectedProducts.map(async (p) => {
+          const normalizedName = p.name.toLowerCase().trim()
+          const mapping = await db.nameMappings
+            .where('originalName')
+            .equals(normalizedName)
+            .first()
+
+          if (mapping) {
+            console.log(`🔄 Mapping appliqué: "${p.name}" → "${mapping.customName}"`)
+          }
+
+          return {
+            ...p,
+            name: mapping ? mapping.customName : p.name,
+            originalName: p.name // Garder le nom original
+          }
+        })
+      )
+
       // Convertir en ProductWithDate avec dates de péremption par défaut
-      const productsWithDates: ProductWithDate[] = detectedProducts.map(p => ({
+      const productsWithDates: ProductWithDate[] = productsWithMappings.map(p => ({
         ...p,
         id: uuid(),
         expirationDate: dayjs().add(7, 'day').format('YYYY-MM-DD'), // Date par défaut : +7 jours
@@ -221,6 +267,7 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
         const product: Product = {
           id: p.id,
           name: p.name,
+          originalName: p.originalName, // Conserver le nom original pour le mapping
           quantity: p.quantity,
           location: p.location, // Utiliser le lieu de conservation individuel
           expirationDate: p.expirationDate,
@@ -297,22 +344,47 @@ export default function ReceiptScanScreen({ setCurrentScreen }: ReceiptScanScree
         {/* Liste des produits détectés */}
         {products.length > 0 && !isScanning && (
           <div className="space-y-4">
-            {/* Instructions de swipe */}
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-4">
-              <p className="text-sm font-semibold text-blue-900 mb-2">👆 Glissez pour changer le lieu :</p>
-              <div className="grid grid-cols-3 gap-2 text-xs text-blue-800">
-                <div className="flex items-center gap-1">
-                  <Refrigerator className="w-4 h-4" />
-                  <span>Par défaut : Frigo</span>
+            {/* Instructions de swipe - Version épurée */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between gap-4 mb-3">
+                {/* Congélateur - Gauche */}
+                <div className="flex-1 flex flex-col items-center gap-2 text-center">
+                  <div className="flex items-center gap-1 text-cyan-600">
+                    <span className="text-lg">←</span>
+                    <Snowflake className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-600">Congélateur</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span>← Swipe gauche</span>
-                  <Snowflake className="w-4 h-4" />
+
+                {/* Séparateur */}
+                <div className="h-12 w-px bg-gray-200"></div>
+
+                {/* Frigo - Centre (par défaut) */}
+                <div className="flex-1 flex flex-col items-center gap-2 text-center">
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <Refrigerator className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <span className="text-xs font-semibold text-blue-700">Frigo (défaut)</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span>Swipe droite →</span>
-                  <Package className="w-4 h-4" />
+
+                {/* Séparateur */}
+                <div className="h-12 w-px bg-gray-200"></div>
+
+                {/* Garde-manger - Droite */}
+                <div className="flex-1 flex flex-col items-center gap-2 text-center">
+                  <div className="flex items-center gap-1 text-amber-600">
+                    <Package className="w-5 h-5" />
+                    <span className="text-lg">→</span>
+                  </div>
+                  <span className="text-xs font-medium text-gray-600">Garde-manger</span>
                 </div>
+              </div>
+
+              {/* Indication tap pour revenir au frigo */}
+              <div className="text-center pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  💡 <span className="font-medium">Tap pour revenir au frigo</span>
+                </p>
               </div>
             </div>
 

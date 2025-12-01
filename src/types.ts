@@ -15,6 +15,7 @@ export interface Product {
   id: string
   barcode?: string
   name: string
+  originalName?: string // Nom original détecté par OCR (pour le mapping)
   brand?: string
   quantity?: string
   location: LocationKind
@@ -32,6 +33,14 @@ export interface NotificationPlan {
   offsetDays: number // -7, -3, -1, 0
   scheduledAt: string // ISO
   delivered: boolean
+}
+
+export interface ProductNameMapping {
+  id?: number
+  originalName: string // Nom original détecté par OCR (normalisé en minuscules)
+  customName: string // Nom personnalisé par l'utilisateur
+  createdAt: string
+  updatedAt: string
 }
 
 export type ExpirationKind = 'DLC' | 'DDM' | 'UNKNOWN'

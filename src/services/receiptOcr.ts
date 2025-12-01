@@ -178,9 +178,19 @@ function parseReceiptText(text: string): DetectedProduct[] {
         // Retirer le prix de la ligne pour obtenir le nom du produit
         productName = line.replace(pricePatternEnd, '').trim()
       } else {
-        // RÈGLE STRICTE: Si la ligne n'a pas de prix à la fin, on l'ignore
-        // Cela permet d'éviter de détecter les catégories comme "FRUITS ET LEGUMES"
-        continue
+        // Format alternatif : prix n'importe où dans la ligne (pour Auchan, Carrefour, etc.)
+        // Chercher un prix n'importe où : 2.50€ ou €2.50 ou 2,50
+        const priceAnywherePattern = /(\d+[.,]\d{2})\s*€?|€\s*(\d+[.,]\d{2})/
+        const anyPriceMatch = line.match(priceAnywherePattern)
+
+        if (anyPriceMatch) {
+          price = anyPriceMatch[1] || anyPriceMatch[2]
+          // Retirer le prix de la ligne
+          productName = line.replace(priceAnywherePattern, '').trim()
+        }
+
+        // Si pas de prix du tout, garder le nom complet
+        // On filtrera ensuite par mots-clés alimentaires
       }
     }
 

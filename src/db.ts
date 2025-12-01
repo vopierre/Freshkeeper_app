@@ -1,10 +1,11 @@
 import Dexie, { Table } from 'dexie'
-import type { Product, NotificationPlan, AppNotification } from './types'
+import type { Product, NotificationPlan, AppNotification, ProductNameMapping } from './types'
 
 class FreshDB extends Dexie {
   products!: Table<Product, string>
   plans!: Table<NotificationPlan, number>
   notifications!: Table<AppNotification, string>
+  nameMappings!: Table<ProductNameMapping, number>
 
   constructor() {
     super('freshkeeper')
@@ -16,6 +17,12 @@ class FreshDB extends Dexie {
       products: 'id, barcode, expirationDate, location, createdAt',
       plans: '++id, productId, scheduledAt, delivered',
       notifications: 'id, productId, createdAt, read'
+    })
+    this.version(3).stores({
+      products: 'id, barcode, expirationDate, location, createdAt',
+      plans: '++id, productId, scheduledAt, delivered',
+      notifications: 'id, productId, createdAt, read',
+      nameMappings: '++id, originalName, createdAt'
     })
   }
 }
