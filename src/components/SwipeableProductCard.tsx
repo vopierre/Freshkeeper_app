@@ -122,8 +122,10 @@ export default function SwipeableProductCard({
   }
 
   // Calculer l'opacité des indicateurs selon la distance de swipe
-  const rightOpacity = Math.max(0, Math.min(translateX / 80, 1))
-  const leftOpacity = Math.max(0, Math.min(Math.abs(translateX) / 80, 1))
+  // Quand la carte glisse vers la droite (translateX positif), on voit l'indicateur gauche "Jeté"
+  const leftOpacity = Math.max(0, Math.min(translateX / 80, 1))
+  // Quand la carte glisse vers la gauche (translateX négatif), on voit l'indicateur droite "Mangé"
+  const rightOpacity = Math.max(0, Math.min(-translateX / 80, 1))
 
   return (
     <div className="relative overflow-hidden rounded-xl mb-3">
