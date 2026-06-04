@@ -1,8 +1,8 @@
 name: Build and deploy
 
-# Permissions nécessaires pour publier sur GitHub Pages via l'action officielle
+# Permissions nécessaires pour que le workflow puisse pousser et gérer Pages
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -12,7 +12,7 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,14 +41,10 @@ jobs:
           mkdir -p dist
           touch dist/.nojekyll
 
-      - name: Upload artifact for GitHub Pages
-        uses: actions/upload-pages-artifact@v1
+      - name: Deploy to GitHub Pages (push to gh-pages)
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: ./dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          allow_empty_commit: false
