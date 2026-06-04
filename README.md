@@ -6,6 +6,24 @@ MVP pour suivre les dates de péremption : ajout de produits, OCR basique de la 
 - Node 18+
 - npm ou pnpm
 
+## Assets static (icônes, splash, manifest)
+Placez vos fichiers statiques (icon-32x32.png, icon-16x16.png, apple-touch-icon.png, manifest.json, splash-*.png, sw.js, ...) dans le dossier `public/` à la racine du projet. Vite copie automatiquement `public/*` dans `dist/` lors du build, ce qui permet aux chemins `%BASE_URL%...` dans `index.html` de fonctionner correctement sur GitHub Pages (/Freshkeeper_App/).
+
+Exemple :
+
+```
+Freshkeeper_app/
+├─ public/
+│  ├─ icon-32x32.png
+│  ├─ icon-16x16.png
+│  ├─ apple-touch-icon.png
+│  ├─ manifest.json
+│  ├─ splash-640x1136.png
+│  └─ sw.js
+├─ src/
+└─ vite.config.ts
+```
+
 ## Installation
 ```bash
 npm i
