@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  base: '/Freshkeeper_App/', // Base URL utilisé lors du build (important pour GitHub Pages sous /Freshkeeper_App/)
   plugins: [react()],
   build: {
     outDir: 'dist',
