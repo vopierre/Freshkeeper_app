@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Primary Meta Tags -->
+    <title>FreshKeeper - Zéro gaspillage alimentaire</title>
+    <meta name="title" content="FreshKeeper - Zéro gaspillage alimentaire" />
+    <meta name="description" content="Gérez vos aliments et évitez le gaspillage avec des notifications intelligentes et des suggestions de recettes" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="FreshKeeper" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="FreshKeeper" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#10b981" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/Freshkeeper_App/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/Freshkeeper_App/icon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/Freshkeeper_App/apple-touch-icon.png" />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/Freshkeeper_App/manifest.json" />
+
+    <!-- Splash Screens for iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-startup-image" href="/Freshkeeper_App/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/Freshkeeper_App/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="/Freshkeeper_App/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/Freshkeeper_App/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/Freshkeeper_App/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
+    <script type="module" crossorigin src="/Freshkeeper_App/assets/index-BLs46hmh.js"></script>
+    <link rel="modulepreload" crossorigin href="/Freshkeeper_App/assets/react-vendor-DJ1oPbzn.js">
+    <link rel="modulepreload" crossorigin href="/Freshkeeper_App/assets/scanner-DtpqL7mZ.js">
+    <link rel="stylesheet" crossorigin href="/Freshkeeper_App/assets/index-_D5IP3XL.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Service Worker Registration -->
+    <script>
+      // Activer le Service Worker en production, désactiver en développement local
+      if ('serviceWorker' in navigator) {
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+
+        if (!isLocalhost) {
+          // Production - Enregistrer le Service Worker
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/Freshkeeper_App/sw.js')
+              .then((registration) => {
+                console.log('Service Worker registered:', registration.scope)
+              })
+              .catch((error) => {
+                console.log('Service Worker registration failed:', error)
+              })
+          })
+        } else {
+          // Développement - Désenregistrer le Service Worker
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (let registration of registrations) {
+              registration.unregister()
+              console.log('Service Worker unregistered in development mode')
+            }
+          })
+        }
+      }
+    </script>
+  </body>
+</html>
