@@ -36,10 +36,27 @@ jobs:
       - name: Build (vite only — skip tsc -b to avoid CI-only tsc errors)
         run: npx vite build
 
+      - name: Ensure public files are copied into dist
+        run: |
+          if [ -d public ]; then
+            echo "Copying public/ -> dist/"
+            cp -a public/. dist/ || true
+          else
+            echo "No public/ directory found"
+          fi
+
       - name: Add .nojekyll to dist
         run: |
           mkdir -p dist
           touch dist/.nojekyll
+
+      - name: Show dist/ contents (diagnostic)
+        run: |
+          echo "dist size:"
+          du -sh dist || true
+          echo "dist tree:"
+          ls -la dist || true
+          ls -R dist | sed -n '1,200p'
 
       - name: Deploy to GitHub Pages (push to gh-pages)
         uses: peaceiris/actions-gh-pages@v3
