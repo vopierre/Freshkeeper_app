@@ -33,7 +33,7 @@ jobs:
       - name: Install dev types required in CI
         run: npm i --no-save -D @types/node
 
-      - name: Build (vite only — skip tsc -b to avoid CI-only tsc errors)
+      - name: Build (vite only)
         run: npx vite build
 
       - name: Ensure public files are copied into dist
@@ -44,6 +44,13 @@ jobs:
           else
             echo "No public/ directory found"
           fi
+          # In case assets were kept at repo root (icon-*.png, manifest.json, sw.js, splash-*.png)
+          for f in icon-32x32.png icon-16x16.png apple-touch-icon.png manifest.json sw.js splash-*.png; do
+            if [ -f "$f" ]; then
+              echo "Copying root/$f -> dist/"
+              cp -a "$f" dist/ || true
+            fi
+          done
 
       - name: Add .nojekyll to dist
         run: |
@@ -56,7 +63,16 @@ jobs:
           du -sh dist || true
           echo "dist tree:"
           ls -la dist || true
-          ls -R dist | sed -n '1,200p'
+          echo "----- dist/index.html -----"
+          if [ -f dist/index.html ]; then
+            sed -n '1,200p' dist/index.html || true
+          else
+            echo "dist/index.html not found"
+            exit 1
+          fi
+          echo "----- end index.html -----"
+          echo "Check assets directory:"
+          ls -la dist/assets || true
 
       - name: Deploy to GitHub Pages (push to gh-pages)
         uses: peaceiris/actions-gh-pages@v3
